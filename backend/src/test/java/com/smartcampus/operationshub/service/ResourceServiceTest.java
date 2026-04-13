@@ -18,9 +18,11 @@ import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 
 @ExtendWith(MockitoExtension.class)
 class ResourceServiceTest {
@@ -94,7 +96,7 @@ class ResourceServiceTest {
         resource.setLocation("Media Store");
         resource.setStatus(ResourceStatus.ACTIVE);
 
-        when(resourceRepository.findAll(any(org.springframework.data.jpa.domain.Specification.class), any(Sort.class)))
+        when(resourceRepository.findAll(ArgumentMatchers.<Specification<Resource>>any(), any(Sort.class)))
                 .thenReturn(List.of(resource));
 
         List<ResourceResponse> responses = resourceService.getResources(new ResourceFilter());

@@ -17,6 +17,14 @@ export async function fetchTickets(filters) {
 	return response.data;
 }
 
+export async function deleteAttachment(ticketId, attachmentId) {
+	await httpClient.delete(`/tickets/${ticketId}/attachments/${attachmentId}`);
+}
+
+export async function deleteTicket(id) {
+	await httpClient.delete(`/tickets/${id}`);
+}
+
 export async function fetchTicketById(id) {
 	const response = await httpClient.get(`/tickets/${id}`);
 	return response.data;

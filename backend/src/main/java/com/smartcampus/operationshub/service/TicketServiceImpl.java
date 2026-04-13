@@ -28,6 +28,7 @@ import com.smartcampus.operationshub.repository.TicketRepository;
 import com.smartcampus.operationshub.validation.TicketFilter;
 import jakarta.persistence.criteria.Predicate;
 import java.io.IOException;
+import java.time.Instant;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -101,6 +102,7 @@ public class TicketServiceImpl implements TicketService {
         ticket.setRequesterEmail(request.getRequesterEmail().trim().toLowerCase(Locale.ROOT));
         ticket.setPreferredContact(request.getPreferredContact().trim());
         ticket.setLocation(request.getLocation() == null ? null : request.getLocation().trim());
+        ticket.setResolveBy(calculateResolveBy(ticket.getPriority()));
 
         if (request.getResourceId() != null) {
             Resource resource = resourceRepository.findById(request.getResourceId())
@@ -316,6 +318,38 @@ public class TicketServiceImpl implements TicketService {
         return toAttachmentResponse(ticketAttachmentRepository.save(attachment));
     }
 
+    @Override
+    public void deleteAttachment(Long ticketId, Long attachmentId) {
+        TicketAttachment attachment = ticketAttachmentRepository.findById(attachmentId)
+                .orElseThrow(() -> new InvalidAttachmentException("Attachment not found for id: " + attachmentId));
+        if (!attachment.getTicket().getId().equals(ticketId)) {
+            throw new InvalidAttachmentException("Attachment does not belong to ticket id: " + ticketId);
+        }
+
+        // Physically delete file
+        Path filePath = attachmentStoragePath.resolve(attachment.getStoredFileName()).normalize();
+        try {
+            Files.deleteIfExists(filePath);
+        } catch (IOException e) {
+            // Log error but continue to delete from DB
+        }
+
+        ticketAttachmentRepository.delete(attachment);
+    }
+
+    @Override
+    public void deleteTicket(Long id) {
+        Ticket ticket = findTicket(id);
+        // Delete all physical attachments first
+        List<TicketAttachment> attachments = ticketAttachmentRepository.findByTicketIdOrderByCreatedAtDesc(id);
+        for (TicketAttachment att : attachments) {
+            try {
+                Files.deleteIfExists(attachmentStoragePath.resolve(att.getStoredFileName()).normalize());
+            } catch (IOException ignored) {}
+        }
+        ticketRepository.delete(ticket);
+    }
+
     private void validateAttachment(MultipartFile file, Long ticketId) {
         if (file == null || file.isEmpty()) {
             throw new InvalidAttachmentException("Attachment file is required");
@@ -408,6 +442,7 @@ public class TicketServiceImpl implements TicketService {
         response.setLocation(ticket.getLocation());
         response.setCreatedAt(ticket.getCreatedAt());
         response.setUpdatedAt(ticket.getUpdatedAt());
+        response.setResolveBy(ticket.getResolveBy());
 
         if (ticket.getResource() != null) {
             response.setResourceId(ticket.getResource().getId());
@@ -481,5 +516,15 @@ public class TicketServiceImpl implements TicketService {
             }
         }
         return recipients;
+    }
+
+    private Instant calculateResolveBy(com.smartcampus.operationshub.entity.TicketPriority priority) {
+        Instant now = Instant.now();
+        return switch (priority) {
+            case CRITICAL -> now.plusSeconds(4 * 3600);
+            case HIGH -> now.plusSeconds(24 * 3600);
+            case MEDIUM -> now.plusSeconds(72 * 3600);
+            case LOW -> now.plusSeconds(168 * 3600);
+        };
     }
 }

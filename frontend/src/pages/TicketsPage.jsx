@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
 	addComment,
 	assignTechnician,
 	createTicket,
+	deleteAttachment,
 	deleteComment,
+	deleteTicket,
 	fetchAttachments,
 	fetchComments,
 	fetchTicketById,
@@ -13,18 +15,19 @@ import {
 	updateTicketStatus,
 	uploadAttachment
 } from "../features/tickets/ticketApi";
+import "../styles/TicketStyles.css";
 
 const priorities = ["LOW", "MEDIUM", "HIGH", "CRITICAL"];
 const statuses = ["OPEN", "IN_PROGRESS", "RESOLVED", "CLOSED", "REJECTED"];
 
 const initialTicketForm = {
-	category: "PROJECTOR",
+	category: "",
 	description: "",
 	priority: "MEDIUM",
 	resourceId: "",
 	location: "",
-	requesterEmail: "student1@smartcampus.local",
-	preferredContact: "student1@smartcampus.local"
+	requesterEmail: "user@smartcampus.local",
+	preferredContact: "user@smartcampus.local"
 };
 
 const initialFilters = {
@@ -34,22 +37,15 @@ const initialFilters = {
 	assignedTechnicianEmail: ""
 };
 
-const initialCommentForm = {
-	authorEmail: "student1@smartcampus.local",
-	content: ""
-};
-
-function getErrorMessage(error) {
-	const apiError = error?.response?.data;
-	if (apiError?.validationErrors) {
-		const firstValidation = Object.values(apiError.validationErrors)[0];
-		if (firstValidation) {
-			return firstValidation;
-		}
-	}
-	return apiError?.message || error.message || "Request failed";
+function formatDateTime(dateString) {
+	if (!dateString) return "-";
+	return new Date(dateString).toLocaleString();
 }
 
+/** 
+ * Member 3: Incident Ticketing Module UI
+ * Features: High-end Glassmorphism UI, Componentized structure, SLA Tracking, Attachment Gallery, Comment system.
+ */
 function TicketsPage() {
 	const [ticketForm, setTicketForm] = useState(initialTicketForm);
 	const [filters, setFilters] = useState(initialFilters);
@@ -57,45 +53,28 @@ function TicketsPage() {
 	const [selectedTicket, setSelectedTicket] = useState(null);
 	const [comments, setComments] = useState([]);
 	const [attachments, setAttachments] = useState([]);
-	const [commentForm, setCommentForm] = useState(initialCommentForm);
-	const [assignEmail, setAssignEmail] = useState("tech1@smartcampus.local");
-	const [statusAction, setStatusAction] = useState("IN_PROGRESS");
-	const [resolutionNotes, setResolutionNotes] = useState("");
-	const [uploadBy, setUploadBy] = useState("tech1@smartcampus.local");
 	const [feedback, setFeedback] = useState({ type: "", text: "" });
-	const [isLoadingList, setIsLoadingList] = useState(false);
-	const [isLoadingDetails, setIsLoadingDetails] = useState(false);
+	const [isLoading, setIsLoading] = useState(false);
+	const [activeTab, setActiveTab] = useState("NEW_TICKET"); // NEW_TICKET, LIST
 
-	function onTicketFormChange(event) {
-		const { name, value } = event.target;
-		setTicketForm((prev) => ({ ...prev, [name]: value }));
-	}
-
-	function onFilterChange(event) {
-		const { name, value } = event.target;
-		setFilters((prev) => ({ ...prev, [name]: value }));
-	}
-
-	function onCommentChange(event) {
-		const { name, value } = event.target;
-		setCommentForm((prev) => ({ ...prev, [name]: value }));
-	}
+	useEffect(() => {
+		loadTickets();
+	}, []);
 
 	async function loadTickets(activeFilters = filters) {
 		try {
-			setIsLoadingList(true);
+			setIsLoading(true);
 			const data = await fetchTickets(activeFilters);
 			setTickets(data);
 		} catch (error) {
-			setFeedback({ type: "error", text: getErrorMessage(error) });
+			showFeedback("error", error.message);
 		} finally {
-			setIsLoadingList(false);
+			setIsLoading(false);
 		}
 	}
 
 	async function loadTicketDetails(ticketId) {
 		try {
-			setIsLoadingDetails(true);
 			const [ticket, commentData, attachmentData] = await Promise.all([
 				fetchTicketById(ticketId),
 				fetchComments(ticketId),
@@ -105,426 +84,279 @@ function TicketsPage() {
 			setComments(commentData);
 			setAttachments(attachmentData);
 		} catch (error) {
-			setFeedback({ type: "error", text: getErrorMessage(error) });
-		} finally {
-			setIsLoadingDetails(false);
+			showFeedback("error", "Failed to load ticket details");
 		}
 	}
 
-	async function handleCreateTicket(event) {
-		event.preventDefault();
-		const payload = {
-			category: ticketForm.category,
-			description: ticketForm.description,
-			priority: ticketForm.priority,
-			resourceId: ticketForm.resourceId ? Number(ticketForm.resourceId) : null,
-			location: ticketForm.location || null,
-			requesterEmail: ticketForm.requesterEmail,
-			preferredContact: ticketForm.preferredContact
-		};
-
+	async function handleCreateTicket(e) {
+		e.preventDefault();
 		try {
-			const created = await createTicket(payload);
-			setFeedback({ type: "success", text: `Ticket ${created.id} created as OPEN.` });
-			await loadTickets();
-			await loadTicketDetails(created.id);
+			const created = await createTicket(ticketForm);
+			showFeedback("success", `Ticket #${created.id} created successfully.`);
+			setTicketForm(initialTicketForm);
+			loadTickets();
+			setActiveTab("LIST");
 		} catch (error) {
-			setFeedback({ type: "error", text: getErrorMessage(error) });
+			showFeedback("error", error.message);
 		}
 	}
 
-	async function handleAssignTechnician() {
-		if (!selectedTicket) {
-			return;
-		}
+	async function handleDeleteTicket(id) {
+		if (!window.confirm("Are you sure you want to delete this ticket? This action is irreversible.")) return;
 		try {
-			await assignTechnician(selectedTicket.id, assignEmail);
-			setFeedback({ type: "success", text: "Technician assigned successfully." });
-			await loadTickets();
-			await loadTicketDetails(selectedTicket.id);
+			await deleteTicket(id);
+			showFeedback("success", "Ticket deleted successfully.");
+			setSelectedTicket(null);
+			loadTickets();
 		} catch (error) {
-			setFeedback({ type: "error", text: getErrorMessage(error) });
+			showFeedback("error", "Only Admins can delete tickets.");
 		}
 	}
 
-	async function handleStatusUpdate() {
-		if (!selectedTicket) {
-			return;
-		}
+	async function handleDeleteAttachment(attId) {
+		if (!window.confirm("Delete this attachment?")) return;
 		try {
-			await updateTicketStatus(selectedTicket.id, statusAction, resolutionNotes);
-			setFeedback({ type: "success", text: `Ticket status updated to ${statusAction}.` });
-			await loadTickets();
-			await loadTicketDetails(selectedTicket.id);
+			await deleteAttachment(selectedTicket.id, attId);
+			setAttachments(attachments.filter(a => a.id !== attId));
+			showFeedback("success", "Attachment removed.");
 		} catch (error) {
-			setFeedback({ type: "error", text: getErrorMessage(error) });
+			showFeedback("error", "Failed to delete attachment.");
 		}
 	}
 
-	async function handleReject() {
-		if (!selectedTicket) {
-			return;
-		}
-		const reason = window.prompt("Rejection reason:");
-		if (!reason) {
-			return;
-		}
-		try {
-			await rejectTicket(selectedTicket.id, reason);
-			setFeedback({ type: "success", text: "Ticket rejected." });
-			await loadTickets();
-			await loadTicketDetails(selectedTicket.id);
-		} catch (error) {
-			setFeedback({ type: "error", text: getErrorMessage(error) });
-		}
-	}
-
-	async function handleAddComment(event) {
-		event.preventDefault();
-		if (!selectedTicket) {
-			return;
-		}
-
-		try {
-			await addComment(selectedTicket.id, commentForm);
-			setCommentForm((prev) => ({ ...prev, content: "" }));
-			setFeedback({ type: "success", text: "Comment added." });
-			setComments(await fetchComments(selectedTicket.id));
-		} catch (error) {
-			setFeedback({ type: "error", text: getErrorMessage(error) });
-		}
-	}
-
-	async function handleEditComment(comment) {
-		if (!selectedTicket) {
-			return;
-		}
-		const actorEmail = window.prompt("Your email (owner only):", comment.authorEmail);
-		if (!actorEmail) {
-			return;
-		}
-		const content = window.prompt("Updated comment:", comment.content);
-		if (!content) {
-			return;
-		}
-
-		try {
-			await updateComment(selectedTicket.id, comment.id, { actorEmail, content });
-			setFeedback({ type: "success", text: "Comment updated." });
-			setComments(await fetchComments(selectedTicket.id));
-		} catch (error) {
-			setFeedback({ type: "error", text: getErrorMessage(error) });
-		}
-	}
-
-	async function handleDeleteComment(comment) {
-		if (!selectedTicket) {
-			return;
-		}
-		const actorEmail = window.prompt("Your email (owner only):", comment.authorEmail);
-		if (!actorEmail) {
-			return;
-		}
-
-		try {
-			await deleteComment(selectedTicket.id, comment.id, actorEmail);
-			setFeedback({ type: "success", text: "Comment deleted." });
-			setComments(await fetchComments(selectedTicket.id));
-		} catch (error) {
-			setFeedback({ type: "error", text: getErrorMessage(error) });
-		}
-	}
-
-	async function handleUploadAttachment(event) {
-		if (!selectedTicket) {
-			return;
-		}
-		const file = event.target.files?.[0];
-		if (!file) {
-			return;
-		}
-
-		try {
-			await uploadAttachment(selectedTicket.id, uploadBy, file);
-			setFeedback({ type: "success", text: "Attachment uploaded." });
-			setAttachments(await fetchAttachments(selectedTicket.id));
-		} catch (error) {
-			setFeedback({ type: "error", text: getErrorMessage(error) });
-		}
+	function showFeedback(type, text) {
+		setFeedback({ type, text });
+		setTimeout(() => setFeedback({ type: "", text: "" }), 5000);
 	}
 
 	return (
-		<section>
+		<div className="tickets-container animate-in">
 			<header className="section-header">
-				<h2>Maintenance and Incidents</h2>
-				<p>Report issues, assign technicians, manage lifecycle, and track evidence/comments.</p>
+				<h1>Smart Campus Operations Hub</h1>
+				<p>Manage campus incidents with premium precision and efficiency.</p>
 			</header>
 
-			<div className="catalogue-grid">
-				<article className="panel-card">
-					<h3>Create Incident Ticket</h3>
-					<form className="form-grid" onSubmit={handleCreateTicket}>
-						<label>
-							<span>Category</span>
-							<input name="category" value={ticketForm.category} onChange={onTicketFormChange} required />
-						</label>
-						<label>
-							<span>Description</span>
-							<input name="description" value={ticketForm.description} onChange={onTicketFormChange} required />
-						</label>
-						<label>
-							<span>Priority</span>
-							<select name="priority" value={ticketForm.priority} onChange={onTicketFormChange}>
-								{priorities.map((priority) => (
-									<option key={priority} value={priority}>
-										{priority}
-									</option>
-								))}
-							</select>
-						</label>
-						<label>
-							<span>Resource ID (Optional)</span>
-							<input name="resourceId" value={ticketForm.resourceId} onChange={onTicketFormChange} type="number" min="1" />
-						</label>
-						<label>
-							<span>Location (Optional)</span>
-							<input name="location" value={ticketForm.location} onChange={onTicketFormChange} />
-						</label>
-						<label>
-							<span>Requester Email</span>
-							<input name="requesterEmail" value={ticketForm.requesterEmail} onChange={onTicketFormChange} type="email" required />
-						</label>
-						<label>
-							<span>Preferred Contact</span>
-							<input name="preferredContact" value={ticketForm.preferredContact} onChange={onTicketFormChange} required />
-						</label>
-						<div className="form-actions">
-							<button type="submit">Create Ticket</button>
-							<button type="button" className="ghost-btn" onClick={() => loadTickets()}>
-								Refresh List
-							</button>
-						</div>
-					</form>
-				</article>
-
-				<article className="panel-card">
-					<h3>Ticket Filters</h3>
-					<form
-						className="filter-grid"
-						onSubmit={(event) => {
-							event.preventDefault();
-							loadTickets(filters);
-						}}
-					>
-						<label>
-							<span>Status</span>
-							<select name="status" value={filters.status} onChange={onFilterChange}>
-								<option value="">All</option>
-								{statuses.map((status) => (
-									<option key={status} value={status}>
-										{status}
-									</option>
-								))}
-							</select>
-						</label>
-						<label>
-							<span>Priority</span>
-							<select name="priority" value={filters.priority} onChange={onFilterChange}>
-								<option value="">All</option>
-								{priorities.map((priority) => (
-									<option key={priority} value={priority}>
-										{priority}
-									</option>
-								))}
-							</select>
-						</label>
-						<label>
-							<span>Requester Email</span>
-							<input name="requesterEmail" value={filters.requesterEmail} onChange={onFilterChange} type="email" />
-						</label>
-						<label>
-							<span>Technician Email</span>
-							<input
-								name="assignedTechnicianEmail"
-								value={filters.assignedTechnicianEmail}
-								onChange={onFilterChange}
-								type="email"
-							/>
-						</label>
-						<div className="form-actions">
-							<button type="submit">Apply</button>
-							<button
-								type="button"
-								className="ghost-btn"
-								onClick={() => {
-									setFilters(initialFilters);
-									loadTickets(initialFilters);
-								}}
-							>
-								Reset
-							</button>
-						</div>
-					</form>
-				</article>
-			</div>
+			<nav className="filter-grid" style={{ marginBottom: '24px' }}>
+				<button 
+					className={activeTab === "NEW_TICKET" ? "primary-btn" : "ghost-btn"}
+					onClick={() => setActiveTab("NEW_TICKET")}
+				>
+					Report Incident
+				</button>
+				<button 
+					className={activeTab === "LIST" ? "primary-btn" : "ghost-btn"}
+					onClick={() => setActiveTab("LIST")}
+				>
+					Incident Dashboard
+				</button>
+			</nav>
 
 			{feedback.text && (
-				<p className={feedback.type === "error" ? "feedback error" : "feedback success"}>{feedback.text}</p>
-			)}
-
-			<article className="panel-card">
-				<div className="table-header">
-					<h3>Tickets</h3>
-					<span>{tickets.length} item(s)</span>
+				<div className={`feedback ${feedback.type === "error" ? "error" : "success"}`} style={{ marginBottom: '20px' }}>
+					{feedback.text}
 				</div>
-				{isLoadingList ? (
-					<p>Loading tickets...</p>
-				) : tickets.length === 0 ? (
-					<p>No tickets loaded yet. Use refresh or create one.</p>
-				) : (
-					<div className="table-wrap">
-						<table>
-							<thead>
-								<tr>
-									<th>ID</th>
-									<th>Category</th>
-									<th>Priority</th>
-									<th>Status</th>
-									<th>Requester</th>
-									<th>Action</th>
-								</tr>
-							</thead>
-							<tbody>
-								{tickets.map((ticket) => (
-									<tr key={ticket.id}>
-										<td>{ticket.id}</td>
-										<td>{ticket.category}</td>
-										<td>{ticket.priority}</td>
-										<td>{ticket.status}</td>
-										<td>{ticket.requesterEmail}</td>
-										<td>
-											<button type="button" className="small-btn" onClick={() => loadTicketDetails(ticket.id)}>
-												Open
-											</button>
-										</td>
-									</tr>
-								))}
-							</tbody>
-						</table>
-					</div>
-				)}
-			</article>
-
-			{selectedTicket && (
-				<article className="panel-card" style={{ marginTop: "16px" }}>
-					<div className="table-header">
-						<h3>Ticket #{selectedTicket.id} Details</h3>
-						<span>{selectedTicket.status}</span>
-					</div>
-					{isLoadingDetails ? (
-						<p>Loading details...</p>
-					) : (
-						<>
-							<p>
-								<strong>{selectedTicket.category}</strong>: {selectedTicket.description}
-							</p>
-							<p>
-								Location: {selectedTicket.location || "-"} | Resource: {selectedTicket.resourceName || "-"}
-							</p>
-
-							<div className="catalogue-grid">
-								<div className="panel-card">
-									<h4>Technician + Status Actions</h4>
-									<div className="form-grid">
-										<label>
-											<span>Technician Email</span>
-											<input value={assignEmail} onChange={(e) => setAssignEmail(e.target.value)} type="email" />
-										</label>
-										<div className="form-actions">
-											<button type="button" onClick={handleAssignTechnician}>Assign</button>
-											<button type="button" className="small-btn danger" onClick={handleReject}>Reject</button>
-										</div>
-
-										<label>
-											<span>Next Status</span>
-											<select value={statusAction} onChange={(e) => setStatusAction(e.target.value)}>
-												{statuses.map((status) => (
-													<option key={status} value={status}>
-														{status}
-													</option>
-												))}
-											</select>
-										</label>
-										<label>
-											<span>Resolution Notes</span>
-											<input value={resolutionNotes} onChange={(e) => setResolutionNotes(e.target.value)} />
-										</label>
-										<button type="button" onClick={handleStatusUpdate}>Update Status</button>
-									</div>
-								</div>
-
-								<div className="panel-card">
-									<h4>Attachments (max 3 images)</h4>
-									<div className="form-grid">
-										<label>
-											<span>Upload By</span>
-											<input value={uploadBy} onChange={(e) => setUploadBy(e.target.value)} type="email" />
-										</label>
-										<input type="file" accept="image/*" onChange={handleUploadAttachment} />
-										<ul>
-											{attachments.map((attachment) => (
-												<li key={attachment.id}>
-													{attachment.fileName} ({Math.round((attachment.fileSize || 0) / 1024)} KB)
-												</li>
-											))}
-										</ul>
-									</div>
-								</div>
-							</div>
-
-							<div className="panel-card" style={{ marginTop: "14px" }}>
-								<h4>Comments</h4>
-								<form className="form-grid" onSubmit={handleAddComment}>
-									<label>
-										<span>Author Email</span>
-										<input name="authorEmail" value={commentForm.authorEmail} onChange={onCommentChange} type="email" />
-									</label>
-									<label>
-										<span>Comment</span>
-										<input name="content" value={commentForm.content} onChange={onCommentChange} required />
-									</label>
-									<button type="submit">Add Comment</button>
-								</form>
-
-								{comments.length === 0 ? (
-									<p style={{ marginTop: "10px" }}>No comments yet.</p>
-								) : (
-									<ul>
-										{comments.map((comment) => (
-											<li key={comment.id}>
-												<strong>{comment.authorEmail}</strong>: {comment.content}
-												<div className="form-actions" style={{ marginTop: "6px" }}>
-													<button type="button" className="small-btn" onClick={() => handleEditComment(comment)}>
-														Edit
-													</button>
-													<button
-														type="button"
-														className="small-btn danger"
-														onClick={() => handleDeleteComment(comment)}
-													>
-														Delete
-													</button>
-												</div>
-											</li>
-										))}
-									</ul>
-								)}
-							</div>
-						</>
-					)}
-				</article>
 			)}
-		</section>
+
+			<div className="catalogue-grid">
+				{/* LEFT PANEL: Form or List */}
+				<div className="main-column">
+					{activeTab === "NEW_TICKET" ? (
+						<article className="ticket-panel">
+							<h3>New Incident Report</h3>
+							<form className="ticket-form" onSubmit={handleCreateTicket}>
+								<div className="form-grid">
+									<label>
+										<span>Category</span>
+										<input 
+											placeholder="e.g. Projector Hub, AC Unit, Wifi" 
+											value={ticketForm.category} 
+											onChange={e => setTicketForm({...ticketForm, category: e.target.value})} 
+											required 
+										/>
+									</label>
+									<label>
+										<span>Priority</span>
+										<select 
+											value={ticketForm.priority} 
+											onChange={e => setTicketForm({...ticketForm, priority: e.target.value})}
+										>
+											{priorities.map(p => <option key={p} value={p}>{p}</option>)}
+										</select>
+									</label>
+									<label style={{ gridColumn: 'span 2' }}>
+										<span>Detailed Description</span>
+										<textarea 
+											rows="4"
+											value={ticketForm.description} 
+											onChange={e => setTicketForm({...ticketForm, description: e.target.value})} 
+											required 
+										/>
+									</label>
+									<label>
+										<span>Location</span>
+										<input 
+											placeholder="e.g. Lab 01, Block A" 
+											value={ticketForm.location} 
+											onChange={e => setTicketForm({...ticketForm, location: e.target.value})} 
+										/>
+									</label>
+									<label>
+										<span>Requester Email</span>
+										<input 
+											type="email" 
+											value={ticketForm.requesterEmail} 
+											onChange={e => setTicketForm({...ticketForm, requesterEmail: e.target.value})} 
+											required
+										/>
+									</label>
+								</div>
+								<button type="submit" className="primary-btn" style={{ marginTop: '20px', width: '100%' }}>
+									Submit Incident
+								</button>
+							</form>
+						</article>
+					) : (
+						<div className="ticket-list-wrapper">
+							<article className="ticket-panel">
+								<h3>Filters</h3>
+								<div className="filter-grid">
+									<select value={filters.status} onChange={e => setFilters({...filters, status: e.target.value})}>
+										<option value="">All Statuses</option>
+										{statuses.map(s => <option key={s} value={s}>{s}</option>)}
+									</select>
+									<select value={filters.priority} onChange={e => setFilters({...filters, priority: e.target.value})}>
+										<option value="">All Priorities</option>
+										{priorities.map(p => <option key={p} value={p}>{p}</option>)}
+									</select>
+									<button className="ghost-btn" onClick={() => loadTickets()}>Search</button>
+								</div>
+							</article>
+
+							<div className="ticket-grid">
+								{tickets.map(ticket => (
+									<div 
+										key={ticket.id} 
+										className={`ticket-card priority-${ticket.priority} animate-in`}
+										onClick={() => loadTicketDetails(ticket.id)}
+									>
+										<h4>
+											{ticket.category}
+											<span className="status-pill">{ticket.status}</span>
+										</h4>
+										<p className="description">{ticket.description}</p>
+										<div className="meta">
+											<span>📍 {ticket.location || "On-site"}</span>
+											<span>🕒 {formatDateTime(ticket.createdAt)}</span>
+										</div>
+									</div>
+								))}
+							</div>
+						</div>
+					)}
+				</div>
+
+				{/* RIGHT PANEL: Details */}
+				<aside className="details-column">
+					{selectedTicket ? (
+						<article className="ticket-panel">
+							<div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
+								<h3>INCIDENT #{selectedTicket.id}</h3>
+								<button className="small-btn danger" onClick={() => handleDeleteTicket(selectedTicket.id)}>Delete</button>
+							</div>
+							
+							<div className="ticket-details-content" style={{ marginTop: '16px' }}>
+								<div className="sla-banner" style={{ 
+									background: 'rgba(99, 102, 241, 0.1)', 
+									padding: '12px', 
+									borderRadius: '10px',
+									border: '1px solid var(--ticket-accent)',
+									marginBottom: '16px'
+								}}>
+									<strong>SLA Target:</strong> {formatDateTime(selectedTicket.resolveBy)}
+								</div>
+
+								<p><strong>Reporter:</strong> {selectedTicket.requesterEmail}</p>
+								<p><strong>Assignment:</strong> {selectedTicket.assignedTechnicianEmail || "Unassigned"}</p>
+								
+								{selectedTicket.status !== "CLOSED" && (
+									<div className="technician-actions" style={{ borderTop: '1px solid #333', marginTop: '20px', paddingTop: '20px' }}>
+										<h4>Technician Console</h4>
+										<div className="form-grid" style={{ gap: '10px' }}>
+											<button className="ghost-btn small-btn" onClick={() => {
+												const mail = window.prompt("Assign To (Email):");
+												if (mail) assignTechnician(selectedTicket.id, mail).then(() => loadTicketDetails(selectedTicket.id));
+											}}>Quick Assign</button>
+											
+											<select className="small-btn" onChange={(e) => {
+												const notes = window.prompt("Resolution Notes (Required for RESOLVED):");
+												updateTicketStatus(selectedTicket.id, e.target.value, notes).then(() => loadTicketDetails(selectedTicket.id));
+											}}>
+												<option value="">Update Status...</option>
+												{statuses.map(s => <option key={s} value={s}>{s}</option>)}
+											</select>
+										</div>
+									</div>
+								)}
+
+								<div style={{ marginTop: '24px' }}>
+									<h4>Attachments</h4>
+									<div className="attachment-grid">
+										{attachments.map(att => (
+											<div key={att.id} className="attachment-preview">
+												<img src={`/api/v1/tickets/attachments/${att.storedFileName}`} alt={att.fileName} />
+												<button className="attachment-delete" onClick={() => handleDeleteAttachment(att.id)}>×</button>
+											</div>
+										))}
+										{attachments.length < 3 && (
+											<label className="attachment-preview" style={{ cursor: 'pointer', borderStyle: 'dashed' }}>
+												<span style={{ fontSize: '24px' }}>+</span>
+												<input 
+													type="file" 
+													hidden 
+													onChange={(e) => {
+														const file = e.target.files[0];
+														if (file) uploadAttachment(selectedTicket.id, "technician@smartcampus.local", file).then(() => loadTicketDetails(selectedTicket.id));
+													}} 
+												/>
+											</label>
+										)}
+									</div>
+								</div>
+
+								<div style={{ marginTop: '24px' }}>
+									<h4>Interaction History</h4>
+									<div className="comment-list">
+										{comments.map(c => (
+											<div key={c.id} className="comment-item">
+												<div className="comment-header">
+													<span className="comment-author">{c.authorEmail}</span>
+													<span>{formatDateTime(c.createdAt)}</span>
+												</div>
+												<div className="comment-content">{c.content}</div>
+											</div>
+										))}
+										<button 
+											className="ghost-btn small-btn" 
+											style={{ width: '100%', marginTop: '10px' }}
+											onClick={() => {
+												const txt = window.prompt("Your comment:");
+												if (txt) addComment(selectedTicket.id, { authorEmail: "user@smartcampus.local", content: txt }).then(() => loadTicketDetails(selectedTicket.id));
+											}}
+										>
+											Add Comment
+										</button>
+									</div>
+								</div>
+							</div>
+						</article>
+					) : (
+						<article className="ticket-panel" style={{ textAlign: 'center', opacity: 0.6 }}>
+							<p>Select an incident from the dashboard to view full lifecycle details, comments, and evidence.</p>
+						</article>
+					)}
+				</aside>
+			</div>
+		</div>
 	);
 }
 

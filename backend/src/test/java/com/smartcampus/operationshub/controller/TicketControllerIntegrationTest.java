@@ -1,7 +1,6 @@
 package com.smartcampus.operationshub.controller;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -25,6 +24,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -39,6 +39,46 @@ class TicketControllerIntegrationTest {
 
     @Autowired
     private ObjectMapper objectMapper;
+
+    @Test
+    @WithMockUser(roles = "USER")
+    void createTicket_shouldBeAllowedForUser() throws Exception {
+        createTicket();
+    }
+
+    @Test
+    @WithMockUser(roles = "TECHNICIAN")
+    void deleteTicket_shouldBeForbiddenForTechnician() throws Exception {
+        long id = createTicket();
+        mockMvc.perform(delete("/api/v1/tickets/{id}", id))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void deleteTicket_shouldBeAllowedForAdmin() throws Exception {
+        long id = createTicket();
+        mockMvc.perform(delete("/api/v1/tickets/{id}", id))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
+    @WithMockUser(roles = "TECHNICIAN")
+    void deleteAttachment_shouldBeAllowedForTechnician() throws Exception {
+        long ticketId = createTicket();
+        
+        MockMultipartFile file = new MockMultipartFile("file", "test.jpg", "image/jpeg", "data".getBytes());
+        String response = mockMvc.perform(multipart("/api/v1/tickets/{id}/attachments", ticketId)
+                        .file(file)
+                        .param("uploadedBy", "tech@smart.local"))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        
+        long attId = objectMapper.readTree(response).get("id").asLong();
+        
+        mockMvc.perform(delete("/api/v1/tickets/{id}/attachments/{attId}", ticketId, attId))
+                .andExpect(status().isNoContent());
+    }
 
     @Test
     void createAssignResolveAndCloseTicket_shouldFollowWorkflow() throws Exception {

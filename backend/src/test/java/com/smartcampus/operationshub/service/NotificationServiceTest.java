@@ -33,7 +33,6 @@ class NotificationServiceTest {
 
     @Test
     void createNotification_shouldNormalizeEmail() {
-        Notification saved = sampleNotification(1L);
         when(notificationRepository.save(any(Notification.class))).thenAnswer(invocation -> {
             Notification arg = invocation.getArgument(0);
             arg.setId(1L);

@@ -1,9 +1,15 @@
 package com.smartcampus.operationshub.service;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.smartcampus.operationshub.dto.TicketCommentUpdateRequest;
+import com.smartcampus.operationshub.dto.TicketCreateRequest;
+import com.smartcampus.operationshub.dto.TicketResponse;
 import com.smartcampus.operationshub.dto.TicketStatusUpdateRequest;
 import com.smartcampus.operationshub.entity.Ticket;
 import com.smartcampus.operationshub.entity.TicketComment;
@@ -15,10 +21,13 @@ import com.smartcampus.operationshub.repository.ResourceRepository;
 import com.smartcampus.operationshub.repository.TicketAttachmentRepository;
 import com.smartcampus.operationshub.repository.TicketCommentRepository;
 import com.smartcampus.operationshub.repository.TicketRepository;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockMultipartFile;
@@ -49,6 +58,35 @@ class TicketServiceTest {
                 resourceRepository,
                 System.getProperty("java.io.tmpdir") + "/smart-campus-test-attachments"
         );
+    }
+
+    @Test
+    void createTicket_shouldCalculateSLA() {
+        TicketCreateRequest request = new TicketCreateRequest();
+        request.setCategory("NETWORK");
+        request.setDescription("No internet in lab");
+        request.setPriority(TicketPriority.CRITICAL);
+        request.setRequesterEmail("stu@smart.local");
+        request.setPreferredContact("Email");
+
+        when(ticketRepository.save(any(Ticket.class))).thenAnswer(i -> {
+            Ticket t = i.getArgument(0);
+            t.setId(10L);
+            return t;
+        });
+
+        TicketResponse response = ticketService.createTicket(request);
+
+        assertNotNull(response.getResolveBy());
+        
+        ArgumentCaptor<Ticket> ticketCaptor = ArgumentCaptor.forClass(Ticket.class);
+        verify(ticketRepository).save(ticketCaptor.capture());
+        Ticket savedTicket = ticketCaptor.getValue();
+        
+        // Critical should be 4 hours
+        Instant expected = savedTicket.getCreatedAt() != null ? savedTicket.getCreatedAt() : Instant.now();
+        long diffHours = ChronoUnit.HOURS.between(expected, savedTicket.getResolveBy());
+        assertEquals(4, diffHours);
     }
 
     @Test

@@ -38,4 +38,8 @@ public interface TicketService {
     List<TicketAttachmentResponse> getAttachments(Long ticketId);
 
     TicketAttachmentResponse uploadAttachment(Long ticketId, String uploadedBy, MultipartFile file);
+
+    void deleteAttachment(Long ticketId, Long attachmentId);
+
+    void deleteTicket(Long id);
 }

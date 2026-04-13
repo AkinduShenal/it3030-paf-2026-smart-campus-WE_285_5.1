@@ -65,6 +65,9 @@ public class Ticket {
     @Column(name = "updated_at")
     private Instant updatedAt;
 
+    @Column(name = "resolve_by")
+    private Instant resolveBy;
+
     @PreUpdate
     public void onUpdate() {
         this.updatedAt = Instant.now();
@@ -172,5 +175,13 @@ public class Ticket {
 
     public Instant getUpdatedAt() {
         return updatedAt;
+    }
+
+    public Instant getResolveBy() {
+        return resolveBy;
+    }
+
+    public void setResolveBy(Instant resolveBy) {
+        this.resolveBy = resolveBy;
     }
 }

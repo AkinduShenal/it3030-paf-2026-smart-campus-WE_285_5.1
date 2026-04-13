@@ -18,14 +18,17 @@ import com.smartcampus.operationshub.exception.BookingStateException;
 import com.smartcampus.operationshub.repository.BookingRepository;
 import com.smartcampus.operationshub.repository.ResourceRepository;
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 
 @ExtendWith(MockitoExtension.class)
 class BookingServiceTest {
@@ -49,7 +52,7 @@ class BookingServiceTest {
         when(resourceRepository.findById(1L)).thenReturn(Optional.of(resource));
         when(bookingRepository.existsByResourceIdAndStatusInAndStartTimeLessThanAndEndTimeGreaterThan(
                 any(Long.class),
-                any(List.class),
+                ArgumentMatchers.<Collection<BookingStatus>>any(),
                 any(LocalDateTime.class),
                 any(LocalDateTime.class)
         )).thenReturn(true);
@@ -72,7 +75,7 @@ class BookingServiceTest {
         when(bookingRepository.existsByIdNotAndResourceIdAndStatusInAndStartTimeLessThanAndEndTimeGreaterThan(
                 any(Long.class),
                 any(Long.class),
-                any(List.class),
+                ArgumentMatchers.<Collection<BookingStatus>>any(),
                 any(LocalDateTime.class),
                 any(LocalDateTime.class)
         )).thenReturn(false);
@@ -111,7 +114,7 @@ class BookingServiceTest {
     @Test
     void getBookings_shouldReturnMappedData() {
         Booking booking = pendingBooking();
-        when(bookingRepository.findAll(any(org.springframework.data.jpa.domain.Specification.class), any(Sort.class)))
+        when(bookingRepository.findAll(ArgumentMatchers.<Specification<Booking>>any(), any(Sort.class)))
                 .thenReturn(List.of(booking));
 
         List<BookingResponse> responses = bookingService.getBookings(new com.smartcampus.operationshub.validation.BookingFilter());

@@ -22,6 +22,7 @@ public class TicketResponse {
     private String rejectionReason;
     private Instant createdAt;
     private Instant updatedAt;
+    private Instant resolveBy;
     private List<TicketCommentResponse> comments;
     private List<TicketAttachmentResponse> attachments;
 
@@ -143,6 +144,14 @@ public class TicketResponse {
 
     public void setUpdatedAt(Instant updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public Instant getResolveBy() {
+        return resolveBy;
+    }
+
+    public void setResolveBy(Instant resolveBy) {
+        this.resolveBy = resolveBy;
     }
 
     public List<TicketCommentResponse> getComments() {

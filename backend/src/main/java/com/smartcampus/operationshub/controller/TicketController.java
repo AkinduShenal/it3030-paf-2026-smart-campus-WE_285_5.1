@@ -16,6 +16,7 @@ import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
@@ -40,6 +41,7 @@ public class TicketController {
     }
 
     @PostMapping
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
     public ResponseEntity<TicketResponse> create(@Valid @RequestBody TicketCreateRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(ticketService.createTicket(request));
     }
@@ -55,17 +57,20 @@ public class TicketController {
     }
 
     @PatchMapping("/{id}/assign")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<TicketResponse> assign(@PathVariable Long id, @Valid @RequestBody TicketAssignRequest request) {
         return ResponseEntity.ok(ticketService.assignTechnician(id, request));
     }
 
     @PatchMapping("/{id}/status")
+    @PreAuthorize("hasAnyRole('TECHNICIAN', 'ADMIN')")
     public ResponseEntity<TicketResponse> updateStatus(@PathVariable Long id,
             @Valid @RequestBody TicketStatusUpdateRequest request) {
         return ResponseEntity.ok(ticketService.updateTicketStatus(id, request));
     }
 
     @PatchMapping("/{id}/reject")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<TicketResponse> reject(@PathVariable Long id, @Valid @RequestBody TicketRejectRequest request) {
         return ResponseEntity.ok(ticketService.rejectTicket(id, request));
     }
@@ -112,5 +117,19 @@ public class TicketController {
             @RequestParam("file") MultipartFile file
     ) {
         return ResponseEntity.status(HttpStatus.CREATED).body(ticketService.uploadAttachment(id, uploadedBy, file));
+    }
+
+    @DeleteMapping("/{id}/attachments/{attachmentId}")
+    @PreAuthorize("hasAnyRole('TECHNICIAN', 'ADMIN')")
+    public ResponseEntity<Void> deleteAttachment(@PathVariable Long id, @PathVariable Long attachmentId) {
+        ticketService.deleteAttachment(id, attachmentId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
+        ticketService.deleteTicket(id);
+        return ResponseEntity.noContent().build();
     }
 }
