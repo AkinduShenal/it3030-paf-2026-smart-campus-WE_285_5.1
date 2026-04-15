@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useAuth } from "../context/AuthContext";
 import {
 	addComment,
 	assignTechnician,
@@ -23,8 +24,8 @@ const initialTicketForm = {
 	priority: "MEDIUM",
 	resourceId: "",
 	location: "",
-	requesterEmail: "student1@smartcampus.local",
-	preferredContact: "student1@smartcampus.local"
+	requesterEmail: "",
+	preferredContact: ""
 };
 
 const initialFilters = {
@@ -35,7 +36,7 @@ const initialFilters = {
 };
 
 const initialCommentForm = {
-	authorEmail: "student1@smartcampus.local",
+	authorEmail: "",
 	content: ""
 };
 
@@ -51,6 +52,8 @@ function getErrorMessage(error) {
 }
 
 function TicketsPage() {
+	const { profile, hasAnyRole } = useAuth();
+	const canManageTickets = hasAnyRole(["ADMIN", "TECHNICIAN"]);
 	const [ticketForm, setTicketForm] = useState(initialTicketForm);
 	const [filters, setFilters] = useState(initialFilters);
 	const [tickets, setTickets] = useState([]);
@@ -58,13 +61,27 @@ function TicketsPage() {
 	const [comments, setComments] = useState([]);
 	const [attachments, setAttachments] = useState([]);
 	const [commentForm, setCommentForm] = useState(initialCommentForm);
-	const [assignEmail, setAssignEmail] = useState("tech1@smartcampus.local");
+	const [assignEmail, setAssignEmail] = useState("");
 	const [statusAction, setStatusAction] = useState("IN_PROGRESS");
 	const [resolutionNotes, setResolutionNotes] = useState("");
-	const [uploadBy, setUploadBy] = useState("tech1@smartcampus.local");
+	const [uploadBy, setUploadBy] = useState("");
 	const [feedback, setFeedback] = useState({ type: "", text: "" });
 	const [isLoadingList, setIsLoadingList] = useState(false);
 	const [isLoadingDetails, setIsLoadingDetails] = useState(false);
+
+	useEffect(() => {
+		if (!profile?.email) {
+			return;
+		}
+		setTicketForm((prev) => ({
+			...prev,
+			requesterEmail: profile.email,
+			preferredContact: prev.preferredContact || profile.email
+		}));
+		setCommentForm((prev) => ({ ...prev, authorEmail: profile.email }));
+		setAssignEmail((prev) => prev || profile.email);
+		setUploadBy((prev) => prev || profile.email);
+	}, [profile]);
 
 	function onTicketFormChange(event) {
 		const { name, value } = event.target;
@@ -119,8 +136,8 @@ function TicketsPage() {
 			priority: ticketForm.priority,
 			resourceId: ticketForm.resourceId ? Number(ticketForm.resourceId) : null,
 			location: ticketForm.location || null,
-			requesterEmail: ticketForm.requesterEmail,
-			preferredContact: ticketForm.preferredContact
+			requesterEmail: profile?.email || ticketForm.requesterEmail,
+			preferredContact: ticketForm.preferredContact || profile?.email || ticketForm.requesterEmail
 		};
 
 		try {
@@ -134,7 +151,7 @@ function TicketsPage() {
 	}
 
 	async function handleAssignTechnician() {
-		if (!selectedTicket) {
+		if (!selectedTicket || !canManageTickets) {
 			return;
 		}
 		try {
@@ -148,7 +165,7 @@ function TicketsPage() {
 	}
 
 	async function handleStatusUpdate() {
-		if (!selectedTicket) {
+		if (!selectedTicket || !canManageTickets) {
 			return;
 		}
 		try {
@@ -162,7 +179,7 @@ function TicketsPage() {
 	}
 
 	async function handleReject() {
-		if (!selectedTicket) {
+		if (!selectedTicket || !canManageTickets) {
 			return;
 		}
 		const reason = window.prompt("Rejection reason:");
@@ -186,7 +203,10 @@ function TicketsPage() {
 		}
 
 		try {
-			await addComment(selectedTicket.id, commentForm);
+			await addComment(selectedTicket.id, {
+				...commentForm,
+				authorEmail: profile?.email || commentForm.authorEmail
+			});
 			setCommentForm((prev) => ({ ...prev, content: "" }));
 			setFeedback({ type: "success", text: "Comment added." });
 			setComments(await fetchComments(selectedTicket.id));
@@ -199,7 +219,7 @@ function TicketsPage() {
 		if (!selectedTicket) {
 			return;
 		}
-		const actorEmail = window.prompt("Your email (owner only):", comment.authorEmail);
+		const actorEmail = profile?.email || comment.authorEmail;
 		if (!actorEmail) {
 			return;
 		}
@@ -221,7 +241,7 @@ function TicketsPage() {
 		if (!selectedTicket) {
 			return;
 		}
-		const actorEmail = window.prompt("Your email (owner only):", comment.authorEmail);
+		const actorEmail = profile?.email || comment.authorEmail;
 		if (!actorEmail) {
 			return;
 		}
@@ -245,7 +265,7 @@ function TicketsPage() {
 		}
 
 		try {
-			await uploadAttachment(selectedTicket.id, uploadBy, file);
+			await uploadAttachment(selectedTicket.id, profile?.email || uploadBy, file);
 			setFeedback({ type: "success", text: "Attachment uploaded." });
 			setAttachments(await fetchAttachments(selectedTicket.id));
 		} catch (error) {
@@ -292,7 +312,7 @@ function TicketsPage() {
 						</label>
 						<label>
 							<span>Requester Email</span>
-							<input name="requesterEmail" value={ticketForm.requesterEmail} onChange={onTicketFormChange} type="email" required />
+							<input name="requesterEmail" value={profile?.email || ticketForm.requesterEmail} type="email" readOnly required />
 						</label>
 						<label>
 							<span>Preferred Contact</span>
@@ -433,42 +453,44 @@ function TicketsPage() {
 							</p>
 
 							<div className="catalogue-grid">
-								<div className="panel-card">
-									<h4>Technician + Status Actions</h4>
-									<div className="form-grid">
-										<label>
-											<span>Technician Email</span>
-											<input value={assignEmail} onChange={(e) => setAssignEmail(e.target.value)} type="email" />
-										</label>
-										<div className="form-actions">
-											<button type="button" onClick={handleAssignTechnician}>Assign</button>
-											<button type="button" className="small-btn danger" onClick={handleReject}>Reject</button>
-										</div>
+								{canManageTickets && (
+									<div className="panel-card">
+										<h4>Technician + Status Actions</h4>
+										<div className="form-grid">
+											<label>
+												<span>Technician Email</span>
+												<input value={assignEmail} onChange={(e) => setAssignEmail(e.target.value)} type="email" />
+											</label>
+											<div className="form-actions">
+												<button type="button" onClick={handleAssignTechnician}>Assign</button>
+												<button type="button" className="small-btn danger" onClick={handleReject}>Reject</button>
+											</div>
 
-										<label>
-											<span>Next Status</span>
-											<select value={statusAction} onChange={(e) => setStatusAction(e.target.value)}>
-												{statuses.map((status) => (
-													<option key={status} value={status}>
-														{status}
-													</option>
-												))}
-											</select>
-										</label>
-										<label>
-											<span>Resolution Notes</span>
-											<input value={resolutionNotes} onChange={(e) => setResolutionNotes(e.target.value)} />
-										</label>
-										<button type="button" onClick={handleStatusUpdate}>Update Status</button>
+											<label>
+												<span>Next Status</span>
+												<select value={statusAction} onChange={(e) => setStatusAction(e.target.value)}>
+													{statuses.map((status) => (
+														<option key={status} value={status}>
+															{status}
+														</option>
+													))}
+												</select>
+											</label>
+											<label>
+												<span>Resolution Notes</span>
+												<input value={resolutionNotes} onChange={(e) => setResolutionNotes(e.target.value)} />
+											</label>
+											<button type="button" onClick={handleStatusUpdate}>Update Status</button>
+										</div>
 									</div>
-								</div>
+								)}
 
 								<div className="panel-card">
 									<h4>Attachments (max 3 images)</h4>
 									<div className="form-grid">
 										<label>
 											<span>Upload By</span>
-											<input value={uploadBy} onChange={(e) => setUploadBy(e.target.value)} type="email" />
+											<input value={profile?.email || uploadBy} type="email" readOnly />
 										</label>
 										<input type="file" accept="image/*" onChange={handleUploadAttachment} />
 										<ul>
@@ -487,7 +509,7 @@ function TicketsPage() {
 								<form className="form-grid" onSubmit={handleAddComment}>
 									<label>
 										<span>Author Email</span>
-										<input name="authorEmail" value={commentForm.authorEmail} onChange={onCommentChange} type="email" />
+										<input name="authorEmail" value={profile?.email || commentForm.authorEmail} type="email" readOnly />
 									</label>
 									<label>
 										<span>Comment</span>

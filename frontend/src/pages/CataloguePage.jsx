@@ -1,10 +1,39 @@
+import { motion } from "framer-motion";
 import { useEffect, useMemo, useState } from "react";
+import { useAuth } from "../context/AuthContext";
 import {
 	createResource,
 	deleteResource,
 	fetchResources,
 	updateResource
 } from "../features/catalogue/resourceApi";
+
+const smoothEase = [0.22, 1, 0.36, 1];
+
+const containerVariants = {
+	hidden: { opacity: 0, y: 14 },
+	visible: {
+		opacity: 1,
+		y: 0,
+		transition: {
+			duration: 0.58,
+			ease: smoothEase,
+			staggerChildren: 0.08
+		}
+	}
+};
+
+const sectionVariants = {
+	hidden: { opacity: 0, y: 10 },
+	visible: {
+		opacity: 1,
+		y: 0,
+		transition: {
+			duration: 0.52,
+			ease: smoothEase
+		}
+	}
+};
 
 const resourceTypes = ["LECTURE_HALL", "LAB", "MEETING_ROOM", "PROJECTOR", "CAMERA", "OTHER"];
 const resourceStatuses = ["ACTIVE", "OUT_OF_SERVICE"];
@@ -35,6 +64,17 @@ function toTimeInputValue(value) {
 	return value.slice(0, 5);
 }
 
+function formatEnumLabel(value) {
+	if (!value) {
+		return "-";
+	}
+	return value
+		.toLowerCase()
+		.split("_")
+		.map((token) => token.charAt(0).toUpperCase() + token.slice(1))
+		.join(" ");
+}
+
 function getErrorMessage(error) {
 	const apiError = error?.response?.data;
 	if (apiError?.validationErrors) {
@@ -47,6 +87,8 @@ function getErrorMessage(error) {
 }
 
 function CataloguePage() {
+	const { hasRole } = useAuth();
+	const isAdmin = hasRole("ADMIN");
 	const [resources, setResources] = useState([]);
 	const [form, setForm] = useState(initialFormState);
 	const [filters, setFilters] = useState(initialFilterState);
@@ -56,6 +98,15 @@ function CataloguePage() {
 	const [feedback, setFeedback] = useState({ type: "", text: "" });
 
 	const formTitle = useMemo(() => (editingId ? "Update Resource" : "Add New Resource"), [editingId]);
+	const activeCount = useMemo(() => resources.filter((resource) => resource.status === "ACTIVE").length, [resources]);
+	const outOfServiceCount = useMemo(
+		() => resources.filter((resource) => resource.status === "OUT_OF_SERVICE").length,
+		[resources]
+	);
+	const totalCapacity = useMemo(
+		() => resources.reduce((sum, resource) => sum + Number(resource.capacity || 0), 0),
+		[resources]
+	);
 
 	async function loadResources(activeFilters = filters) {
 		try {
@@ -90,6 +141,10 @@ function CataloguePage() {
 	}
 
 	async function handleSave(event) {
+		if (!isAdmin) {
+			setFeedback({ type: "error", text: "Only ADMIN users can modify resources." });
+			return;
+		}
 		event.preventDefault();
 		setFeedback({ type: "", text: "" });
 
@@ -123,6 +178,9 @@ function CataloguePage() {
 	}
 
 	function handleEdit(resource) {
+		if (!isAdmin) {
+			return;
+		}
 		setEditingId(resource.id);
 		setForm({
 			name: resource.name,
@@ -138,6 +196,9 @@ function CataloguePage() {
 	}
 
 	async function handleDelete(resource) {
+		if (!isAdmin) {
+			return;
+		}
 		const confirmed = window.confirm(`Delete resource \"${resource.name}\"?`);
 		if (!confirmed) {
 			return;
@@ -163,17 +224,45 @@ function CataloguePage() {
 	}
 
 	return (
-		<section className="catalogue-page">
-			<header className="section-header">
-				<h2>Facilities and Assets Catalogue</h2>
-				<p>Manage campus resources with availability, location, and status filtering.</p>
-			</header>
+		<motion.section className="catalogue-page" variants={containerVariants} initial="hidden" animate="visible">
+			<motion.header className="catalogue-hero" variants={sectionVariants}>
+				<div className="catalogue-hero-main">
+					<p className="catalogue-eyebrow">Campus Operations Console</p>
+					<h2>Facilities and Assets Catalogue</h2>
+					<p>View campus resources with availability, location, and status filtering.</p>
+					{!isAdmin && (
+						<p className="catalogue-readonly">Read-only mode: only ADMIN can create, update, and delete resources.</p>
+					)}
+				</div>
+				<div className="catalogue-metrics">
+					<article className="catalogue-metric-card">
+						<span>Total Assets</span>
+						<strong>{resources.length}</strong>
+					</article>
+					<article className="catalogue-metric-card">
+						<span>Active</span>
+						<strong>{activeCount}</strong>
+					</article>
+					<article className="catalogue-metric-card">
+						<span>Out of Service</span>
+						<strong>{outOfServiceCount}</strong>
+					</article>
+					<article className="catalogue-metric-card">
+						<span>Total Capacity</span>
+						<strong>{totalCapacity}</strong>
+					</article>
+				</div>
+			</motion.header>
 
 			<div className="catalogue-grid">
-				<article className="panel-card">
-					<h3>{formTitle}</h3>
-					<form className="form-grid" onSubmit={handleSave}>
-						<label>
+				{isAdmin && (
+					<motion.article className="panel-card catalogue-panel" variants={sectionVariants}>
+						<div className="catalogue-panel-head">
+							<h3>{formTitle}</h3>
+							<p>Create or update campus resources with complete availability details.</p>
+						</div>
+						<form className="form-grid catalogue-form-grid" onSubmit={handleSave}>
+						<label className="field-span-2">
 							<span>Name</span>
 							<input name="name" value={form.name} onChange={handleFormChange} required maxLength={120} />
 						</label>
@@ -201,7 +290,7 @@ function CataloguePage() {
 							/>
 						</label>
 
-						<label>
+						<label className="field-span-2">
 							<span>Location</span>
 							<input name="location" value={form.location} onChange={handleFormChange} required maxLength={150} />
 						</label>
@@ -227,7 +316,7 @@ function CataloguePage() {
 							/>
 						</label>
 
-						<div className="time-row">
+						<div className="time-row field-span-2">
 							<label>
 								<span>Available From</span>
 								<input
@@ -248,22 +337,26 @@ function CataloguePage() {
 							</label>
 						</div>
 
-						<div className="form-actions">
-							<button type="submit" disabled={isSubmitting}>
-								{isSubmitting ? "Saving..." : editingId ? "Update Resource" : "Create Resource"}
-							</button>
-							{editingId && (
-								<button type="button" className="ghost-btn" onClick={resetForm}>
-									Cancel Edit
+							<div className="form-actions field-span-2">
+								<button type="submit" disabled={isSubmitting}>
+									{isSubmitting ? "Saving..." : editingId ? "Update Resource" : "Create Resource"}
 								</button>
-							)}
-						</div>
-					</form>
-				</article>
+								{editingId && (
+									<button type="button" className="ghost-btn" onClick={resetForm}>
+										Cancel Edit
+									</button>
+								)}
+							</div>
+						</form>
+					</motion.article>
+				)}
 
-				<article className="panel-card">
-					<h3>Search and Filters</h3>
-					<form className="filter-grid" onSubmit={handleFilterSubmit}>
+				<motion.article className="panel-card catalogue-panel" variants={sectionVariants}>
+					<div className="catalogue-panel-head">
+						<h3>Search and Filters</h3>
+						<p>Narrow results by type, status, location, and capacity range.</p>
+					</div>
+					<form className="filter-grid catalogue-filter-grid" onSubmit={handleFilterSubmit}>
 						<label>
 							<span>Type</span>
 							<select name="type" value={filters.type} onChange={handleFilterChange}>
@@ -288,7 +381,7 @@ function CataloguePage() {
 							</select>
 						</label>
 
-						<label>
+						<label className="field-span-2">
 							<span>Location</span>
 							<input name="location" value={filters.location} onChange={handleFilterChange} />
 						</label>
@@ -315,29 +408,34 @@ function CataloguePage() {
 							/>
 						</label>
 
-						<div className="form-actions">
+						<div className="form-actions field-span-2">
 							<button type="submit">Apply Filters</button>
 							<button type="button" className="ghost-btn" onClick={handleFilterReset}>
 								Reset
 							</button>
 						</div>
 					</form>
-				</article>
+				</motion.article>
 			</div>
 
 			{feedback.text && (
-				<p className={feedback.type === "error" ? "feedback error" : "feedback success"}>{feedback.text}</p>
+				<motion.p
+					variants={sectionVariants}
+					className={feedback.type === "error" ? "feedback error" : "feedback success"}
+				>
+					{feedback.text}
+				</motion.p>
 			)}
 
-			<article className="panel-card">
+			<motion.article className="panel-card catalogue-panel" variants={sectionVariants}>
 				<div className="table-header">
 					<h3>Resource List</h3>
 					<span>{resources.length} item(s)</span>
 				</div>
 				{isLoading ? (
-					<p>Loading resources...</p>
+					<p className="catalogue-empty-state">Loading resources...</p>
 				) : resources.length === 0 ? (
-					<p>No resources found for current filters.</p>
+					<p className="catalogue-empty-state">No resources found for current filters.</p>
 				) : (
 					<div className="table-wrap">
 						<table>
@@ -353,17 +451,17 @@ function CataloguePage() {
 								</tr>
 							</thead>
 							<tbody>
-								{resources.map((resource) => (
-									<tr key={resource.id}>
+								{resources.map((resource, index) => (
+									<tr key={resource.id} className="catalogue-row" style={{ animationDelay: `${index * 45}ms` }}>
 										<td>{resource.name}</td>
-										<td>{resource.type}</td>
+										<td>{formatEnumLabel(resource.type)}</td>
 										<td>{resource.capacity}</td>
 										<td>{resource.location}</td>
 										<td>
 											<span
 												className={resource.status === "ACTIVE" ? "status-chip active" : "status-chip inactive"}
 											>
-												{resource.status}
+												{formatEnumLabel(resource.status)}
 											</span>
 										</td>
 										<td>
@@ -375,16 +473,22 @@ function CataloguePage() {
 											</small>
 										</td>
 										<td className="actions-cell">
-											<button type="button" className="small-btn" onClick={() => handleEdit(resource)}>
-												Edit
-											</button>
-											<button
-												type="button"
-												className="small-btn danger"
-												onClick={() => handleDelete(resource)}
-											>
-												Delete
-											</button>
+											{isAdmin ? (
+												<>
+													<button type="button" className="small-btn" onClick={() => handleEdit(resource)}>
+														Edit
+													</button>
+													<button
+														type="button"
+														className="small-btn danger"
+														onClick={() => handleDelete(resource)}
+													>
+														Delete
+													</button>
+												</>
+											) : (
+												<span>-</span>
+											)}
 										</td>
 									</tr>
 								))}
@@ -392,8 +496,8 @@ function CataloguePage() {
 						</table>
 					</div>
 				)}
-			</article>
-		</section>
+			</motion.article>
+		</motion.section>
 	);
 }
 

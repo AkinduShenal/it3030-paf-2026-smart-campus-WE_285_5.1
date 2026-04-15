@@ -23,5 +23,11 @@ app:
   security:
     oauth2:
       enabled: ${SECURITY_OAUTH2_ENABLED:false}
+      registration-id: ${SECURITY_OAUTH2_REGISTRATION_ID:google}
+      backend-base-url: ${BACKEND_BASE_URL:http://localhost:8080}
+      frontend-success-url: ${FRONTEND_SUCCESS_URL:http://localhost:5173/}
+    rbac:
+      admin-emails: ${SECURITY_ADMIN_EMAILS:admin@smartcampus.local}
+      technician-emails: ${SECURITY_TECHNICIAN_EMAILS:tech1@smartcampus.local}
   storage:
     ticket-attachments-dir: ${TICKET_ATTACHMENTS_DIR:${java.io.tmpdir}/smart-campus-operations-hub/ticket-attachments}

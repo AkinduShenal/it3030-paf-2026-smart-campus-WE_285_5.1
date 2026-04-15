@@ -72,3 +72,21 @@ Frontend:
 2. `npm install`
 3. `npm run dev`
 4. Open `http://localhost:5173`
+
+## Shared Team Database Setup (Recommended)
+
+Use this mode when all team members must see the same data.
+
+1. Provision one shared PostgreSQL instance (cloud or centrally hosted).
+2. Copy `backend/.env.shared.example` to `backend/.env.shared`.
+3. Fill `DB_URL`, `DB_USERNAME`, and `DB_PASSWORD` with the same values for all team members.
+4. Start backend with:
+	- `./scripts/run_backend_shared.sh`
+5. Start frontend with:
+	- `cd frontend && npm run dev -- --host`
+
+Notes:
+
+- `dev` profile uses H2 in-memory and is not shared.
+- `dev,persist` profile is local-file persistence on one machine only.
+- `prod` profile + same PostgreSQL credentials is the team-shared mode.

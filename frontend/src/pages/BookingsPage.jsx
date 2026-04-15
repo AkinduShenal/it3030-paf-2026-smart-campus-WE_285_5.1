@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useAuth } from "../context/AuthContext";
 import {
 	approveBooking,
 	cancelBooking,
@@ -13,7 +14,7 @@ const bookingStatuses = ["PENDING", "APPROVED", "REJECTED", "CANCELLED"];
 
 const initialBookingForm = {
 	resourceId: "",
-	requesterEmail: "student1@smartcampus.local",
+	requesterEmail: "",
 	startTime: "",
 	endTime: "",
 	purpose: "",
@@ -45,6 +46,8 @@ function toDateTimeLabel(value) {
 }
 
 function BookingsPage() {
+	const { profile, hasRole } = useAuth();
+	const isAdmin = hasRole("ADMIN");
 	const [bookingForm, setBookingForm] = useState(initialBookingForm);
 	const [adminFilters, setAdminFilters] = useState(initialAdminFilters);
 	const [myBookings, setMyBookings] = useState([]);
@@ -59,11 +62,16 @@ function BookingsPage() {
 	const canSubmit = useMemo(
 		() =>
 			bookingForm.resourceId &&
-			bookingForm.requesterEmail &&
+			(profile?.email || bookingForm.requesterEmail) &&
 			bookingForm.startTime &&
 			bookingForm.endTime &&
 			bookingForm.purpose,
-		[bookingForm]
+		[bookingForm, profile]
+	);
+
+	const selectedResource = useMemo(
+		() => availableResources.find((resource) => String(resource.id) === String(bookingForm.resourceId)) || null,
+		[availableResources, bookingForm.resourceId]
 	);
 
 	const bookingSummary = useMemo(() => {
@@ -74,12 +82,22 @@ function BookingsPage() {
 		return {
 			resources: availableResources.length,
 			myTotal: myBookings.length,
-			adminTotal: adminBookings.length,
 			myPending,
 			myApproved,
 			queuePending
 		};
 	}, [myBookings, adminBookings, availableResources]);
+
+	useEffect(() => {
+		if (!profile?.email) {
+			return;
+		}
+		setBookingForm((prev) => ({ ...prev, requesterEmail: profile.email }));
+	}, [profile]);
+
+	useEffect(() => {
+		loadAvailableResources();
+	}, []);
 
 	function onBookingFormChange(event) {
 		const { name, value } = event.target;
@@ -91,17 +109,13 @@ function BookingsPage() {
 		setAdminFilters((prev) => ({ ...prev, [name]: value }));
 	}
 
-	useEffect(() => {
-		loadAvailableResources();
-	}, []);
-
 	async function loadAvailableResources() {
 		try {
 			setIsLoadingResources(true);
 			const data = await fetchResources({ status: "ACTIVE" });
-			setAvailableResources(data);
+			setAvailableResources(Array.isArray(data) ? data : []);
 		} catch (error) {
-			setFeedback({ type: "error", text: `Failed to load resources: ${getErrorMessage(error)}` });
+			setFeedback({ type: "error", text: getErrorMessage(error) });
 		} finally {
 			setIsLoadingResources(false);
 		}
@@ -113,7 +127,7 @@ function BookingsPage() {
 
 		const payload = {
 			resourceId: Number(bookingForm.resourceId),
-			requesterEmail: bookingForm.requesterEmail,
+			requesterEmail: profile?.email || bookingForm.requesterEmail,
 			startTime: `${bookingForm.startTime}:00`,
 			endTime: `${bookingForm.endTime}:00`,
 			purpose: bookingForm.purpose,
@@ -124,8 +138,10 @@ function BookingsPage() {
 			setIsSubmitting(true);
 			await createBooking(payload);
 			setFeedback({ type: "success", text: "Booking request submitted as PENDING." });
-			await loadMyBookings(bookingForm.requesterEmail);
-			await loadAdminBookings(adminFilters);
+			await loadMyBookings(payload.requesterEmail);
+			if (isAdmin) {
+				await loadAdminBookings(adminFilters);
+			}
 		} catch (error) {
 			setFeedback({ type: "error", text: getErrorMessage(error) });
 		} finally {
@@ -133,7 +149,7 @@ function BookingsPage() {
 		}
 	}
 
-	async function loadMyBookings(requesterEmail = bookingForm.requesterEmail) {
+	async function loadMyBookings(requesterEmail = profile?.email || bookingForm.requesterEmail) {
 		if (!requesterEmail) {
 			setFeedback({ type: "error", text: "Requester email is required to load your bookings." });
 			return;
@@ -166,6 +182,9 @@ function BookingsPage() {
 	}
 
 	async function handleApprove(id) {
+		if (!isAdmin) {
+			return;
+		}
 		try {
 			await approveBooking(id);
 			setFeedback({ type: "success", text: `Booking ${id} approved.` });
@@ -177,6 +196,9 @@ function BookingsPage() {
 	}
 
 	async function handleReject(id) {
+		if (!isAdmin) {
+			return;
+		}
 		const reason = window.prompt("Rejection reason:");
 		if (!reason) {
 			return;
@@ -194,10 +216,12 @@ function BookingsPage() {
 
 	async function handleCancel(id) {
 		try {
-			await cancelBooking(id, bookingForm.requesterEmail);
+			await cancelBooking(id, profile?.email || bookingForm.requesterEmail);
 			setFeedback({ type: "success", text: `Booking ${id} cancelled.` });
 			await loadMyBookings();
-			await loadAdminBookings(adminFilters);
+			if (isAdmin) {
+				await loadAdminBookings(adminFilters);
+			}
 		} catch (error) {
 			setFeedback({ type: "error", text: getErrorMessage(error) });
 		}
@@ -236,8 +260,10 @@ function BookingsPage() {
 					<p className="booking-stat-value booking-stat-value--success">{bookingSummary.myApproved}</p>
 				</article>
 				<article className="booking-stat-card">
-					<p className="booking-stat-label">Queue Pending</p>
-					<p className="booking-stat-value booking-stat-value--danger">{bookingSummary.queuePending}</p>
+					<p className="booking-stat-label">{isAdmin ? "Queue Pending" : "My Total"}</p>
+					<p className="booking-stat-value booking-stat-value--danger">
+						{isAdmin ? bookingSummary.queuePending : bookingSummary.myTotal}
+					</p>
 				</article>
 			</section>
 
@@ -263,16 +289,21 @@ function BookingsPage() {
 								disabled={isLoadingResources || availableResources.length === 0}
 								className="booking-request-input"
 							>
-								<option value="">Select active resource</option>
+								<option value="">
+									{isLoadingResources ? "Loading available resources..." : "Select active resource"}
+								</option>
 								{availableResources.map((resource) => (
 									<option key={resource.id} value={resource.id}>
-										#{resource.id} - {resource.name} ({resource.type})
+										#{resource.id} - {resource.name} ({resource.location || "No location"})
 									</option>
 								))}
 							</select>
-							{isLoadingResources && <small className="booking-help-text">Loading resources...</small>}
-							{!isLoadingResources && availableResources.length === 0 && (
-								<small className="booking-help-text">No ACTIVE resources found. Create one in Catalogue first.</small>
+							{selectedResource ? (
+								<small className="booking-help-text">
+									Selected: {selectedResource.name} | Capacity {selectedResource.capacity || "-"}
+								</small>
+							) : (
+								<small className="booking-help-text">Choose from active resources. ID is selected automatically.</small>
 							)}
 						</label>
 
@@ -280,11 +311,10 @@ function BookingsPage() {
 							<span className="booking-request-label">Requester Email</span>
 							<input
 								name="requesterEmail"
-								value={bookingForm.requesterEmail}
-								onChange={onBookingFormChange}
+								value={profile?.email || bookingForm.requesterEmail}
 								type="email"
-								required
 								className="booking-request-input"
+								readOnly
 							/>
 						</label>
 
@@ -347,6 +377,13 @@ function BookingsPage() {
 							</button>
 							<button
 								type="button"
+								onClick={loadAvailableResources}
+								className="booking-request-btn booking-request-btn--ghost"
+							>
+								Refresh Resources
+							</button>
+							<button
+								type="button"
 								onClick={() => loadMyBookings()}
 								className="booking-request-btn booking-request-btn--ghost"
 							>
@@ -356,68 +393,68 @@ function BookingsPage() {
 					</form>
 				</article>
 
-				<article className="panel-card booking-section-card booking-admin-card">
-					<div className="booking-request-card__header">
-						<h3>Admin Review Filters</h3>
-						<p>Filter booking requests by resource, status, or requester.</p>
-					</div>
-					<form className="booking-admin-filter-form" onSubmit={handleAdminFilterSubmit}>
-						<p className="booking-admin-filter-note">
-							Use one or more filters to narrow queue results quickly.
-						</p>
-						<label className="booking-request-field booking-admin-field booking-admin-field--resource">
-							<span className="booking-request-label">Resource ID</span>
-							<input
-								name="resourceId"
-								value={adminFilters.resourceId}
-								onChange={onAdminFilterChange}
-								type="number"
-								min="1"
-								placeholder="Ex: 101"
-								className="booking-request-input"
-							/>
-						</label>
-						<label className="booking-request-field booking-admin-field booking-admin-field--status">
-							<span className="booking-request-label">Status</span>
-							<select
-								name="status"
-								value={adminFilters.status}
-								onChange={onAdminFilterChange}
-								className="booking-request-input"
-							>
-								<option value="">All</option>
-								{bookingStatuses.map((status) => (
-									<option key={status} value={status}>
-										{status}
-									</option>
-								))}
-							</select>
-						</label>
-						<label className="booking-request-field booking-admin-field booking-admin-field--email">
-							<span className="booking-request-label">Requester Email</span>
-							<input
-								name="requesterEmail"
-								value={adminFilters.requesterEmail}
-								onChange={onAdminFilterChange}
-								type="email"
-								className="booking-request-input"
-								placeholder="student1@smartcampus.local"
-							/>
-						</label>
-						<div className="booking-request-actions booking-request-actions--tight">
-							<button type="submit" className="booking-request-btn booking-request-btn--primary">
-								Load Bookings
-							</button>
-							<button
-								type="button"
-								onClick={() => loadAdminBookings({})}
-								className="booking-request-btn booking-request-btn--ghost"
-							>
-								Load All
-							</button>
+				{isAdmin && (
+					<article className="panel-card booking-section-card booking-admin-card">
+						<div className="booking-request-card__header">
+							<h3>Admin Review Filters</h3>
+							<p>Filter booking requests by resource, status, or requester.</p>
 						</div>
-					</form>
-				</article>
+						<form className="booking-admin-filter-form" onSubmit={handleAdminFilterSubmit}>
+							<p className="booking-admin-filter-note">Use one or more filters to narrow queue results quickly.</p>
+							<label className="booking-request-field booking-admin-field booking-admin-field--resource">
+								<span className="booking-request-label">Resource ID</span>
+								<input
+									name="resourceId"
+									value={adminFilters.resourceId}
+									onChange={onAdminFilterChange}
+									type="number"
+									min="1"
+									placeholder="Ex: 101"
+									className="booking-request-input"
+								/>
+							</label>
+							<label className="booking-request-field booking-admin-field booking-admin-field--status">
+								<span className="booking-request-label">Status</span>
+								<select
+									name="status"
+									value={adminFilters.status}
+									onChange={onAdminFilterChange}
+									className="booking-request-input"
+								>
+									<option value="">All</option>
+									{bookingStatuses.map((status) => (
+										<option key={status} value={status}>
+											{status}
+										</option>
+									))}
+								</select>
+							</label>
+							<label className="booking-request-field booking-admin-field booking-admin-field--email">
+								<span className="booking-request-label">Requester Email</span>
+								<input
+									name="requesterEmail"
+									value={adminFilters.requesterEmail}
+									onChange={onAdminFilterChange}
+									type="email"
+									className="booking-request-input"
+									placeholder="student1@smartcampus.local"
+								/>
+							</label>
+							<div className="booking-request-actions booking-request-actions--tight">
+								<button type="submit" className="booking-request-btn booking-request-btn--primary">
+									Load Bookings
+								</button>
+								<button
+									type="button"
+									onClick={() => loadAdminBookings({})}
+									className="booking-request-btn booking-request-btn--ghost"
+								>
+									Load All
+								</button>
+							</div>
+						</form>
+					</article>
+				)}
 			</div>
 
 			{feedback.text && (
@@ -435,9 +472,7 @@ function BookingsPage() {
 			<article className="panel-card booking-table-card overflow-hidden">
 				<div className="booking-table-head">
 					<h3>My Bookings</h3>
-					<span className="table-count-badge">
-						{myBookings.length} item(s)
-					</span>
+					<span className="table-count-badge">{myBookings.length} item(s)</span>
 				</div>
 				<p className="booking-table-subtitle">Your personal requests and their latest booking status.</p>
 				{isLoadingMy ? (
@@ -493,73 +528,73 @@ function BookingsPage() {
 				)}
 			</article>
 
-			<article className="panel-card booking-table-card overflow-hidden">
-				<div className="booking-table-head">
-					<h3>Admin Booking Queue</h3>
-					<span className="table-count-badge">
-						{adminBookings.length} item(s)
-					</span>
-				</div>
-				<p className="booking-table-subtitle">Pending and reviewed requests for operational follow-up.</p>
-				{isLoadingAdmin ? (
-					<p className="booking-table-loading">Loading admin queue...</p>
-				) : adminBookings.length === 0 ? (
-					<div className="booking-empty-state">
-						<div className="booking-empty-state__icon" />
-						<p>No bookings found. Use filters and click Load Bookings.</p>
+			{isAdmin && (
+				<article className="panel-card booking-table-card overflow-hidden">
+					<div className="booking-table-head">
+						<h3>Admin Booking Queue</h3>
+						<span className="table-count-badge">{adminBookings.length} item(s)</span>
 					</div>
-				) : (
-					<div className="overflow-x-auto">
-						<table className="booking-table">
-							<thead>
-								<tr>
-									<th>ID</th>
-									<th>Requester</th>
-									<th>Resource</th>
-									<th>Time</th>
-									<th>Status</th>
-									<th>Actions</th>
-								</tr>
-							</thead>
-							<tbody>
-								{adminBookings.map((booking) => (
-									<tr key={booking.id}>
-										<td>{booking.id}</td>
-										<td>{booking.requesterEmail}</td>
-										<td>{booking.resourceName}</td>
-										<td>{toDateTimeLabel(booking.startTime)}</td>
-										<td>
-											<span className={getStatusClass(booking.status)}>{booking.status}</span>
-										</td>
-										<td>
-											{booking.status === "PENDING" ? (
-												<div className="booking-row-actions">
-													<button
-														type="button"
-														onClick={() => handleApprove(booking.id)}
-														className="booking-row-btn booking-row-btn--success"
-													>
-														Approve
-													</button>
-													<button
-														type="button"
-														onClick={() => handleReject(booking.id)}
-														className="booking-row-btn booking-row-btn--danger"
-													>
-														Reject
-													</button>
-												</div>
-											) : (
-												<span>-</span>
-											)}
-										</td>
+					<p className="booking-table-subtitle">Pending and reviewed requests for operational follow-up.</p>
+					{isLoadingAdmin ? (
+						<p className="booking-table-loading">Loading admin queue...</p>
+					) : adminBookings.length === 0 ? (
+						<div className="booking-empty-state">
+							<div className="booking-empty-state__icon" />
+							<p>No bookings found. Use filters and click Load Bookings.</p>
+						</div>
+					) : (
+						<div className="overflow-x-auto">
+							<table className="booking-table">
+								<thead>
+									<tr>
+										<th>ID</th>
+										<th>Requester</th>
+										<th>Resource</th>
+										<th>Time</th>
+										<th>Status</th>
+										<th>Actions</th>
 									</tr>
-								))}
-							</tbody>
-						</table>
-					</div>
-				)}
-			</article>
+								</thead>
+								<tbody>
+									{adminBookings.map((booking) => (
+										<tr key={booking.id}>
+											<td>{booking.id}</td>
+											<td>{booking.requesterEmail}</td>
+											<td>{booking.resourceName}</td>
+											<td>{toDateTimeLabel(booking.startTime)}</td>
+											<td>
+												<span className={getStatusClass(booking.status)}>{booking.status}</span>
+											</td>
+											<td>
+												{booking.status === "PENDING" ? (
+													<div className="booking-row-actions">
+														<button
+															type="button"
+															onClick={() => handleApprove(booking.id)}
+															className="booking-row-btn booking-row-btn--success"
+														>
+															Approve
+														</button>
+														<button
+															type="button"
+															onClick={() => handleReject(booking.id)}
+															className="booking-row-btn booking-row-btn--danger"
+														>
+															Reject
+														</button>
+													</div>
+												) : (
+													<span>-</span>
+												)}
+											</td>
+										</tr>
+									))}
+								</tbody>
+							</table>
+						</div>
+					)}
+				</article>
+			)}
 		</section>
 	);
 }
