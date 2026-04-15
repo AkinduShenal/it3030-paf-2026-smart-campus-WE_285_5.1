@@ -356,13 +356,16 @@ function BookingsPage() {
 					</form>
 				</article>
 
-				<article className="panel-card booking-section-card">
+				<article className="panel-card booking-section-card booking-admin-card">
 					<div className="booking-request-card__header">
 						<h3>Admin Review Filters</h3>
 						<p>Filter booking requests by resource, status, or requester.</p>
 					</div>
 					<form className="booking-admin-filter-form" onSubmit={handleAdminFilterSubmit}>
-						<label className="booking-request-field">
+						<p className="booking-admin-filter-note">
+							Use one or more filters to narrow queue results quickly.
+						</p>
+						<label className="booking-request-field booking-admin-field booking-admin-field--resource">
 							<span className="booking-request-label">Resource ID</span>
 							<input
 								name="resourceId"
@@ -370,10 +373,11 @@ function BookingsPage() {
 								onChange={onAdminFilterChange}
 								type="number"
 								min="1"
+								placeholder="Ex: 101"
 								className="booking-request-input"
 							/>
 						</label>
-						<label className="booking-request-field">
+						<label className="booking-request-field booking-admin-field booking-admin-field--status">
 							<span className="booking-request-label">Status</span>
 							<select
 								name="status"
@@ -389,7 +393,7 @@ function BookingsPage() {
 								))}
 							</select>
 						</label>
-						<label className="booking-request-field">
+						<label className="booking-request-field booking-admin-field booking-admin-field--email">
 							<span className="booking-request-label">Requester Email</span>
 							<input
 								name="requesterEmail"
