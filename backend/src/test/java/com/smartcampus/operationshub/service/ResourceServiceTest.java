@@ -3,6 +3,7 @@ package com.smartcampus.operationshub.service;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.smartcampus.operationshub.dto.ResourceRequest;
@@ -76,6 +77,13 @@ class ResourceServiceTest {
     }
 
     @Test
+    void getResourceById_shouldThrowWhenNotFound() {
+        when(resourceRepository.findById(404L)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class, () -> resourceService.getResourceById(404L));
+    }
+
+    @Test
     void getResources_shouldThrowWhenCapacityRangeInvalid() {
         ResourceFilter filter = new ResourceFilter();
         filter.setMinCapacity(100);
@@ -101,5 +109,16 @@ class ResourceServiceTest {
 
         assertEquals(1, responses.size());
         assertEquals("Projector P1", responses.get(0).getName());
+    }
+
+    @Test
+    void deleteResource_shouldDeleteWhenFound() {
+        Resource existing = new Resource();
+        existing.setId(7L);
+        when(resourceRepository.findById(7L)).thenReturn(Optional.of(existing));
+
+        resourceService.deleteResource(7L);
+
+        verify(resourceRepository).delete(existing);
     }
 }
