@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { fetchCurrentUser } from "../features/auth/authApi";
 import {
 	AlertCircle,
 	CheckCircle2,
@@ -14,6 +15,13 @@ import {
 	UserPlus,
 	XCircle
 } from "lucide-react";
+
+function formatTimestamp(value) {
+	if (!value) {
+		return "-";
+	}
+	return new Date(value).toLocaleString();
+}
 import {
 	addComment,
 	assignTechnician,
@@ -81,6 +89,37 @@ function TicketsPage() {
 	const [isLoadingList, setIsLoadingList] = useState(false);
 	const [isLoadingDetails, setIsLoadingDetails] = useState(false);
 	const [isProcessing, setIsProcessing] = useState(false);
+	const [isRejecting, setIsRejecting] = useState(false);
+	const [rejectionReason, setRejectionReason] = useState("");
+	const [editingCommentId, setEditingCommentId] = useState(null);
+	const [editCommentContent, setEditCommentContent] = useState("");
+
+	useEffect(() => {
+		let active = true;
+
+		async function hydrateUser() {
+			try {
+				const user = await fetchCurrentUser();
+				if (active && user?.email) {
+					setTicketForm((prev) => ({
+						...prev,
+						requesterEmail: user.email,
+						preferredContact: user.email
+					}));
+					setUploadBy(user.email);
+					setCommentForm((prev) => ({ ...prev, authorEmail: user.email }));
+					setFilters((prev) => ({ ...prev, requesterEmail: user.email }));
+				}
+			} catch (_e) {
+				// Fallback to defaults
+			}
+		}
+
+		hydrateUser();
+		return () => {
+			active = false;
+		};
+	}, []);
 
 	function onTicketFormChange(event) {
 		const { name, value } = event.target;
@@ -184,20 +223,23 @@ function TicketsPage() {
 	}
 
 	async function handleReject() {
-		if (!selectedTicket) {
+		if (!selectedTicket || !rejectionReason.trim()) {
+			setFeedback({ type: "error", text: "Please provide a rejection reason." });
 			return;
 		}
-		const reason = window.prompt("Rejection reason:");
-		if (!reason) {
-			return;
-		}
+
 		try {
-			await rejectTicket(selectedTicket.id, reason);
+			setIsProcessing(true);
+			await rejectTicket(selectedTicket.id, rejectionReason);
 			setFeedback({ type: "success", text: "Ticket rejected." });
+			setIsRejecting(false);
+			setRejectionReason("");
 			await loadTickets();
 			await loadTicketDetails(selectedTicket.id);
 		} catch (error) {
 			setFeedback({ type: "error", text: getErrorMessage(error) });
+		} finally {
+			setIsProcessing(false);
 		}
 	}
 
@@ -217,25 +259,29 @@ function TicketsPage() {
 		}
 	}
 
-	async function handleEditComment(comment) {
-		if (!selectedTicket) {
-			return;
-		}
-		const actorEmail = window.prompt("Your email (owner only):", comment.authorEmail);
-		if (!actorEmail) {
-			return;
-		}
-		const content = window.prompt("Updated comment:", comment.content);
-		if (!content) {
+	function startEditComment(comment) {
+		setEditingCommentId(comment.id);
+		setEditCommentContent(comment.content);
+	}
+
+	async function handleSaveEditComment(comment) {
+		if (!selectedTicket || !editCommentContent.trim()) {
 			return;
 		}
 
 		try {
-			await updateComment(selectedTicket.id, comment.id, { actorEmail, content });
+			setIsProcessing(true);
+			await updateComment(selectedTicket.id, comment.id, {
+				actorEmail: comment.authorEmail,
+				content: editCommentContent
+			});
 			setFeedback({ type: "success", text: "Comment updated." });
+			setEditingCommentId(null);
 			setComments(await fetchComments(selectedTicket.id));
 		} catch (error) {
 			setFeedback({ type: "error", text: getErrorMessage(error) });
+		} finally {
+			setIsProcessing(false);
 		}
 	}
 
@@ -243,17 +289,20 @@ function TicketsPage() {
 		if (!selectedTicket) {
 			return;
 		}
-		const actorEmail = window.prompt("Your email (owner only):", comment.authorEmail);
-		if (!actorEmail) {
+
+		if (!window.confirm("Are you sure you want to delete this comment?")) {
 			return;
 		}
 
 		try {
-			await deleteComment(selectedTicket.id, comment.id, actorEmail);
+			setIsProcessing(true);
+			await deleteComment(selectedTicket.id, comment.id, comment.authorEmail);
 			setFeedback({ type: "success", text: "Comment deleted." });
 			setComments(await fetchComments(selectedTicket.id));
 		} catch (error) {
 			setFeedback({ type: "error", text: getErrorMessage(error) });
+		} finally {
+			setIsProcessing(false);
 		}
 	}
 
@@ -505,6 +554,12 @@ function TicketsPage() {
 								</div>
 							</div>
 
+							<div style={{ marginTop: "12px", borderTop: "1px solid #f1f5f9", paddingTop: "12px", fontSize: "0.85rem", color: "#64748b" }}>
+								<p style={{ margin: 0 }}>
+									Created: {formatTimestamp(selectedTicket.createdAt)} | Last Updated: {formatTimestamp(selectedTicket.updatedAt)}
+								</p>
+							</div>
+
 							<div className="catalogue-grid">
 								<div className="panel-card technician-view">
 									<div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "14px" }}>
@@ -521,10 +576,34 @@ function TicketsPage() {
 												<UserPlus size={16} />
 												{isProcessing ? "Processing..." : "Assign"}
 											</button>
-											<button type="button" className="small-btn danger icon-btn" onClick={handleReject} disabled={isProcessing}>
-												<XCircle size={16} />
-												Reject
-											</button>
+											{!isRejecting ? (
+												<button
+													type="button"
+													className="small-btn danger icon-btn"
+													onClick={() => setIsRejecting(true)}
+													disabled={isProcessing}
+												>
+													<XCircle size={16} />
+													Reject
+												</button>
+											) : (
+												<div style={{ width: "100%", display: "grid", gap: "8px", marginTop: "10px" }}>
+													<textarea
+														placeholder="Reason for rejection..."
+														value={rejectionReason}
+														onChange={(e) => setRejectionReason(e.target.value)}
+														autoFocus
+													/>
+													<div className="form-actions">
+														<button type="button" className="small-btn danger" onClick={handleReject} disabled={isProcessing}>
+															Confirm Reject
+														</button>
+														<button type="button" className="ghost-btn" onClick={() => setIsRejecting(false)}>
+															Cancel
+														</button>
+													</div>
+												</div>
+											)}
 										</div>
 
 										<label>
@@ -602,19 +681,43 @@ function TicketsPage() {
 										{comments.map((comment) => (
 											<li key={comment.id} className="comment-item">
 												<span className="comment-author">{comment.authorEmail}</span>
-												<p className="comment-content">{comment.content}</p>
-												<div className="form-actions" style={{ marginTop: "8px" }}>
-													<button type="button" className="small-btn ghost-btn" onClick={() => handleEditComment(comment)}>
-														Edit
-													</button>
-													<button
-														type="button"
-														className="small-btn danger"
-														onClick={() => handleDeleteComment(comment)}
-													>
-														Delete
-													</button>
-												</div>
+												{editingCommentId === comment.id ? (
+													<div style={{ marginTop: "8px", display: "grid", gap: "8px" }}>
+														<textarea
+															value={editCommentContent}
+															onChange={(e) => setEditCommentContent(e.target.value)}
+															autoFocus
+														/>
+														<div className="form-actions">
+															<button type="button" className="small-btn" onClick={() => handleSaveEditComment(comment)}>
+																Save
+															</button>
+															<button type="button" className="ghost-btn" onClick={() => setEditingCommentId(null)}>
+																Cancel
+															</button>
+														</div>
+													</div>
+												) : (
+													<>
+														<p className="comment-content">{comment.content}</p>
+														<div className="form-actions" style={{ marginTop: "8px" }}>
+															<button
+																type="button"
+																className="small-btn ghost-btn"
+																onClick={() => startEditComment(comment)}
+															>
+																Edit
+															</button>
+															<button
+																type="button"
+																className="small-btn danger"
+																onClick={() => handleDeleteComment(comment)}
+															>
+																Delete
+															</button>
+														</div>
+													</>
+												)}
 											</li>
 										))}
 									</ul>
