@@ -459,10 +459,7 @@ function TicketsPage() {
 
 			<article className="panel-card">
 				<div className="table-header">
-					<div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-						<Ticket size={20} className="icon-wrapper" />
-						<h3>Tickets</h3>
-					</div>
+					<h3>Tickets</h3>
 					<span>{tickets.length} item(s)</span>
 				</div>
 				{isLoadingList ? (
