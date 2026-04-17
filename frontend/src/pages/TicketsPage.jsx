@@ -1,27 +1,6 @@
 import { useEffect, useState } from "react";
 import { fetchCurrentUser } from "../features/auth/authApi";
-import {
-	AlertCircle,
-	CheckCircle2,
-	Clock,
-	FileText,
-	Filter,
-	MessageSquare,
-	PlusCircle,
-	RefreshCw,
-	Search,
-	Ticket,
-	UploadCloud,
-	UserPlus,
-	XCircle
-} from "lucide-react";
 
-function formatTimestamp(value) {
-	if (!value) {
-		return "-";
-	}
-	return new Date(value).toLocaleString();
-}
 import {
 	addComment,
 	assignTechnician,
@@ -36,6 +15,13 @@ import {
 	updateTicketStatus,
 	uploadAttachment
 } from "../features/tickets/ticketApi";
+
+function formatTimestamp(value) {
+	if (!value) {
+		return "-";
+	}
+	return new Date(value).toLocaleString();
+}
 
 const priorities = ["LOW", "MEDIUM", "HIGH", "CRITICAL"];
 const statuses = ["OPEN", "IN_PROGRESS", "RESOLVED", "CLOSED", "REJECTED"];
@@ -333,10 +319,7 @@ function TicketsPage() {
 
 			<div className="catalogue-grid">
 				<article className="panel-card">
-					<div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "14px" }}>
-						<PlusCircle size={20} className="icon-wrapper" />
-						<h3 style={{ margin: 0 }}>Create Incident Ticket</h3>
-					</div>
+					<h3 style={{ margin: 0, marginBottom: "14px" }}>Create Incident Ticket</h3>
 					<form className="form-grid" onSubmit={handleCreateTicket}>
 						<label>
 							<span>Category</span>
@@ -373,12 +356,10 @@ function TicketsPage() {
 							<input name="preferredContact" value={ticketForm.preferredContact} onChange={onTicketFormChange} required />
 						</label>
 						<div className="form-actions">
-							<button type="submit" className="icon-btn">
-								<PlusCircle size={18} />
+							<button type="submit">
 								Create Ticket
 							</button>
-							<button type="button" className="ghost-btn icon-btn" onClick={() => loadTickets()}>
-								<RefreshCw size={18} />
+							<button type="button" className="ghost-btn" onClick={() => loadTickets()}>
 								Refresh List
 							</button>
 						</div>
@@ -386,10 +367,7 @@ function TicketsPage() {
 				</article>
 
 				<article className="panel-card">
-					<div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "14px" }}>
-						<Filter size={20} className="icon-wrapper" />
-						<h3 style={{ margin: 0 }}>Ticket Filters</h3>
-					</div>
+					<h3 style={{ margin: 0, marginBottom: "14px" }}>Ticket Filters</h3>
 					<form
 						className="filter-grid"
 						onSubmit={(event) => {
@@ -433,19 +411,17 @@ function TicketsPage() {
 							/>
 						</label>
 						<div className="form-actions">
-							<button type="submit" className="icon-btn">
-								<Search size={18} />
+							<button type="submit">
 								Apply
 							</button>
 							<button
 								type="button"
-								className="ghost-btn icon-btn"
+								className="ghost-btn"
 								onClick={() => {
 									setFilters(initialFilters);
 									loadTickets(initialFilters);
 								}}
 							>
-								<RefreshCw size={18} />
 								Reset
 							</button>
 						</div>
@@ -511,10 +487,7 @@ function TicketsPage() {
 			{selectedTicket && (
 				<article className="panel-card fade-in" style={{ marginTop: "16px" }}>
 					<div className="table-header">
-						<div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-							<FileText size={22} className="icon-wrapper" />
-							<h3 style={{ margin: 0 }}>Ticket #{selectedTicket.id} Details</h3>
-						</div>
+						<h3 style={{ margin: 0 }}>Ticket #{selectedTicket.id} Details</h3>
 						<span className={`status-chip ${selectedTicket.status.toLowerCase().replace("_", "-")}`}>
 							{selectedTicket.status}
 						</span>
@@ -527,10 +500,9 @@ function TicketsPage() {
 						{["OPEN", "IN_PROGRESS", "RESOLVED", "CLOSED"].map((step, index) => {
 							const isCompleted = statuses.indexOf(selectedTicket.status) >= statuses.indexOf(step) && selectedTicket.status !== "REJECTED";
 							const isActive = selectedTicket.status === step;
-							const StepIcon = isCompleted ? CheckCircle2 : Clock;
 							return (
 								<div key={step} className={`step ${isCompleted ? "completed" : ""} ${isActive ? "active" : ""}`}>
-									<StepIcon size={14} />
+									{index + 1}
 									<span className="step-label">{step.replace("_", " ")}</span>
 								</div>
 							);
@@ -556,28 +528,23 @@ function TicketsPage() {
 
 							<div className="catalogue-grid">
 								<div className="panel-card technician-view">
-									<div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "14px" }}>
-										<UserPlus size={18} className="icon-wrapper" />
-										<h4 style={{ margin: 0 }}>Technician + Status Actions</h4>
-									</div>
+									<h4 style={{ margin: 0, marginBottom: "14px" }}>Technician + Status Actions</h4>
 									<div className="form-grid">
 										<label>
 											<span>Technician Email</span>
 											<input value={assignEmail} onChange={(e) => setAssignEmail(e.target.value)} type="email" />
 										</label>
 										<div className="form-actions">
-											<button type="button" className="icon-btn" onClick={handleAssignTechnician} disabled={isProcessing}>
-												<UserPlus size={16} />
+											<button type="button" onClick={handleAssignTechnician} disabled={isProcessing}>
 												{isProcessing ? "Processing..." : "Assign"}
 											</button>
 											{!isRejecting ? (
 												<button
 													type="button"
-													className="small-btn danger icon-btn"
+													className="small-btn danger"
 													onClick={() => setIsRejecting(true)}
 													disabled={isProcessing}
 												>
-													<XCircle size={16} />
 													Reject
 												</button>
 											) : (
@@ -621,12 +588,11 @@ function TicketsPage() {
 								</div>
 
 								<div className="panel-card">
-									<div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "14px" }}>
-										<UploadCloud size={18} className="icon-wrapper" />
-										<h4 style={{ margin: 0 }}>Attachments</h4>
-									</div>
+									<h4 style={{ margin: 0, marginBottom: "14px" }}>Attachments</h4>
 									<label className="upload-area">
-										<UploadCloud size={24} style={{ marginBottom: "8px", color: "#64748b" }} />
+										<p style={{ margin: 0, fontSize: "0.9rem", color: "#64748b" }}>
+											<strong>Click to upload</strong> evidence images
+										</p>
 										<input type="file" accept="image/*" onChange={handleUploadAttachment} style={{ display: "none" }} />
 									</label>
 
@@ -652,10 +618,7 @@ function TicketsPage() {
 							</div>
 
 							<div className="panel-card" style={{ marginTop: "14px" }}>
-								<div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "14px" }}>
-									<MessageSquare size={18} className="icon-wrapper" />
-									<h4 style={{ margin: 0 }}>Comments</h4>
-								</div>
+								<h4 style={{ margin: 0, marginBottom: "14px" }}>Comments</h4>
 								<form className="form-grid" onSubmit={handleAddComment}>
 									<label>
 										<span>Author Email</span>

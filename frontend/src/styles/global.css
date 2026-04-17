@@ -227,20 +227,6 @@ button:disabled {
 	border: 1px solid #c8d6ea;
 }
 
-.icon-btn {
-	display: inline-flex;
-	align-items: center;
-	gap: 8px;
-	justify-content: center;
-}
-
-.icon-wrapper {
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	color: #1f3a69;
-}
-
 .feedback {
 	margin: 8px 0 14px;
 	padding: 10px 12px;
