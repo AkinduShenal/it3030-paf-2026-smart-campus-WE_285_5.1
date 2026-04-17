@@ -327,10 +327,7 @@ function TicketsPage() {
 	return (
 		<section>
 			<header className="section-header">
-				<div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-					<Ticket size={28} className="icon-wrapper" />
-					<h2 style={{ margin: 0 }}>Maintenance and Incidents</h2>
-				</div>
+				<h2 style={{ margin: 0 }}>Maintenance and Incidents</h2>
 				<p>Report issues, assign technicians, manage lifecycle, and track evidence/comments.</p>
 			</header>
 
