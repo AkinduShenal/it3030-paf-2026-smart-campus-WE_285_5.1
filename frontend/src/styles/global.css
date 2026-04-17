@@ -163,18 +163,31 @@ body {
 
 button {
 	height: 38px;
-	padding: 0 14px;
+	padding: 0 16px;
 	border: none;
 	border-radius: 8px;
 	background: #1f3a69;
 	color: #ffffff;
 	cursor: pointer;
 	font-weight: 600;
+	transition: all 0.2s ease;
+}
+
+button:hover {
+	background: #2a4f8d;
+	transform: translateY(-1px);
+	box-shadow: 0 4px 12px rgba(31, 58, 105, 0.2);
+}
+
+button:active {
+	transform: translateY(0);
 }
 
 button:disabled {
-	opacity: 0.7;
+	opacity: 0.6;
 	cursor: not-allowed;
+	transform: none;
+	box-shadow: none;
 }
 
 .ghost-btn {
@@ -223,9 +236,13 @@ table {
 th,
 td {
 	text-align: left;
-	padding: 10px;
+	padding: 12px 10px;
 	border-bottom: 1px solid #e4ebf4;
-	vertical-align: top;
+	vertical-align: middle;
+}
+
+tr:hover td {
+	background-color: #f8fafc;
 }
 
 th {
@@ -244,14 +261,67 @@ th {
 	font-weight: 700;
 }
 
-.status-chip.active {
-	background: #dcfce7;
-	color: #166534;
+.status-chip.active,
+.status-chip.resolved {
+	background: #e8f7ea;
+	color: #186137;
+	border: 1px solid #b8e3c1;
 }
 
-.status-chip.inactive {
+.status-chip.inactive,
+.status-chip.closed {
+	background: #f1f5f9;
+	color: #475569;
+	border: 1px solid #cbd5e1;
+}
+
+.status-chip.open {
+	background: #e0f2fe;
+	color: #0369a1;
+	border: 1px solid #bae6fd;
+}
+
+.status-chip.in-progress {
+	background: #fef3c7;
+	color: #92400e;
+	border: 1px solid #fde68a;
+}
+
+.status-chip.rejected {
 	background: #fee2e2;
 	color: #991b1b;
+	border: 1px solid #fecaca;
+}
+
+/* Priority Chips */
+.priority-chip {
+	display: inline-flex;
+	align-items: center;
+	padding: 2px 6px;
+	border-radius: 6px;
+	font-size: 0.7rem;
+	font-weight: 700;
+	text-transform: uppercase;
+}
+
+.priority-chip.critical {
+	background: #450a0a;
+	color: #fecaca;
+}
+
+.priority-chip.high {
+	background: #fee2e2;
+	color: #991b1b;
+}
+
+.priority-chip.medium {
+	background: #fef3c7;
+	color: #92400e;
+}
+
+.priority-chip.low {
+	background: #f0fdf4;
+	color: #166534;
 }
 
 .actions-cell {
@@ -345,6 +415,40 @@ th {
 	color: #5b6d86;
 	font-size: 0.9rem;
 	margin-top: 0;
+}
+
+.comment-list {
+	list-style: none;
+	padding: 0;
+	margin: 16px 0 0;
+	display: grid;
+	gap: 12px;
+}
+
+.comment-item {
+	padding: 12px;
+	background: #f8fafc;
+	border: 1px solid #e2e8f0;
+	border-radius: 10px;
+	position: relative;
+}
+
+.comment-author {
+	font-weight: 700;
+	font-size: 0.85rem;
+	color: #1e293b;
+	display: block;
+	margin-bottom: 4px;
+}
+
+.comment-content {
+	font-size: 0.95rem;
+	color: #334155;
+	line-height: 1.4;
+}
+
+.comment-item tr:hover {
+	background: #f1f5f9;
 }
 
 @media (max-width: 1100px) {

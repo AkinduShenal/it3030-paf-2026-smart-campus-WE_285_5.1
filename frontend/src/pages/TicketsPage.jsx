@@ -399,8 +399,16 @@ function TicketsPage() {
 									<tr key={ticket.id}>
 										<td>{ticket.id}</td>
 										<td>{ticket.category}</td>
-										<td>{ticket.priority}</td>
-										<td>{ticket.status}</td>
+										<td>
+											<span className={`priority-chip ${ticket.priority.toLowerCase().replace("_", "-")}`}>
+												{ticket.priority}
+											</span>
+										</td>
+										<td>
+											<span className={`status-chip ${ticket.status.toLowerCase().replace("_", "-")}`}>
+												{ticket.status}
+											</span>
+										</td>
 										<td>{ticket.requesterEmail}</td>
 										<td>
 											<button type="button" className="small-btn" onClick={() => loadTicketDetails(ticket.id)}>
@@ -419,18 +427,24 @@ function TicketsPage() {
 				<article className="panel-card" style={{ marginTop: "16px" }}>
 					<div className="table-header">
 						<h3>Ticket #{selectedTicket.id} Details</h3>
-						<span>{selectedTicket.status}</span>
+						<span className={`status-chip ${selectedTicket.status.toLowerCase().replace("_", "-")}`}>
+							{selectedTicket.status}
+						</span>
 					</div>
 					{isLoadingDetails ? (
 						<p>Loading details...</p>
 					) : (
 						<>
-							<p>
-								<strong>{selectedTicket.category}</strong>: {selectedTicket.description}
-							</p>
-							<p>
-								Location: {selectedTicket.location || "-"} | Resource: {selectedTicket.resourceName || "-"}
-							</p>
+							<div className="catalogue-grid" style={{ marginTop: "12px", borderTop: "1px solid #f1f5f9", paddingTop: "12px" }}>
+								<div>
+									<p style={{ margin: "0 0 4px" }}><strong>Category:</strong> {selectedTicket.category}</p>
+									<p style={{ margin: 0, color: "#5b6d86" }}>{selectedTicket.description}</p>
+								</div>
+								<div>
+									<p style={{ margin: "0 0 4px" }}><strong>Location:</strong> {selectedTicket.location || "Not specified"}</p>
+									<p style={{ margin: 0 }}><strong>Resource:</strong> {selectedTicket.resourceName || "-"}</p>
+								</div>
+							</div>
 
 							<div className="catalogue-grid">
 								<div className="panel-card">
@@ -499,12 +513,13 @@ function TicketsPage() {
 								{comments.length === 0 ? (
 									<p style={{ marginTop: "10px" }}>No comments yet.</p>
 								) : (
-									<ul>
+									<ul className="comment-list">
 										{comments.map((comment) => (
-											<li key={comment.id}>
-												<strong>{comment.authorEmail}</strong>: {comment.content}
-												<div className="form-actions" style={{ marginTop: "6px" }}>
-													<button type="button" className="small-btn" onClick={() => handleEditComment(comment)}>
+											<li key={comment.id} className="comment-item">
+												<span className="comment-author">{comment.authorEmail}</span>
+												<p className="comment-content">{comment.content}</p>
+												<div className="form-actions" style={{ marginTop: "8px" }}>
+													<button type="button" className="small-btn ghost-btn" onClick={() => handleEditComment(comment)}>
 														Edit
 													</button>
 													<button
