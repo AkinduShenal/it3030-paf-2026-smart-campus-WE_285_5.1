@@ -148,6 +148,15 @@ body {
 	font-size: 0.95rem;
 }
 
+.form-grid textarea {
+	padding: 10px;
+	border-radius: 8px;
+	border: 1px solid #cbd6e5;
+	font-size: 0.95rem;
+	min-height: 80px;
+	font-family: inherit;
+}
+
 .time-row {
 	display: grid;
 	grid-template-columns: repeat(2, minmax(140px, 1fr));
@@ -449,6 +458,130 @@ th {
 
 .comment-item tr:hover {
 	background: #f1f5f9;
+}
+
+/* Attachment Enhancements */
+.attachment-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+	gap: 12px;
+	margin-top: 10px;
+}
+
+.attachment-card {
+	background: #ffffff;
+	border: 1px solid #e2e8f0;
+	border-radius: 8px;
+	padding: 10px;
+	text-align: center;
+	transition: all 0.2s ease;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 4px;
+}
+
+.attachment-card:hover {
+	border-color: #1f3a69;
+	box-shadow: 0 4px 12px rgba(15, 31, 58, 0.08);
+}
+
+.file-icon {
+	font-size: 1.5rem;
+	margin-bottom: 4px;
+}
+
+.file-name {
+	font-size: 0.75rem;
+	font-weight: 600;
+	color: #1e293b;
+	word-break: break-all;
+	display: block;
+}
+
+.file-size {
+	font-size: 0.65rem;
+	color: #64748b;
+}
+
+.upload-area {
+	border: 2px dashed #cbd6e5;
+	border-radius: 12px;
+	padding: 20px;
+	text-align: center;
+	background: #f8fafc;
+	cursor: pointer;
+	transition: all 0.2s ease;
+}
+
+.upload-area:hover {
+	border-color: #1f3a69;
+	background: #f1f5f9;
+}
+
+/* Lifecycle Stepper */
+.lifecycle-stepper {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin: 16px 0;
+	padding: 0 10px;
+	position: relative;
+}
+
+.lifecycle-stepper::before {
+	content: "";
+	position: absolute;
+	top: 50%;
+	left: 30px;
+	right: 30px;
+	height: 2px;
+	background: #e2e8f0;
+	z-index: 1;
+}
+
+.step {
+	background: #ffffff;
+	border: 2px solid #e2e8f0;
+	color: #94a3b8;
+	width: 32px;
+	height: 32px;
+	border-radius: 50%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 0.8rem;
+	font-weight: 700;
+	z-index: 2;
+	position: relative;
+	transition: all 0.3s ease;
+}
+
+.step.active {
+	border-color: #1f3a69;
+	color: #1f3a69;
+}
+
+.step.completed {
+	background: #1f3a69;
+	border-color: #1f3a69;
+	color: #ffffff;
+}
+
+.step-label {
+	position: absolute;
+	top: 100%;
+	left: 50%;
+	transform: translateX(-50%);
+	margin-top: 6px;
+	font-size: 0.65rem;
+	white-space: nowrap;
+	font-weight: 600;
+	color: #64748b;
+}
+
+.step.active .step-label {
+	color: #1f3a69;
 }
 
 @media (max-width: 1100px) {

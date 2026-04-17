@@ -65,6 +65,7 @@ function TicketsPage() {
 	const [feedback, setFeedback] = useState({ type: "", text: "" });
 	const [isLoadingList, setIsLoadingList] = useState(false);
 	const [isLoadingDetails, setIsLoadingDetails] = useState(false);
+	const [isProcessing, setIsProcessing] = useState(false);
 
 	function onTicketFormChange(event) {
 		const { name, value } = event.target;
@@ -138,12 +139,15 @@ function TicketsPage() {
 			return;
 		}
 		try {
+			setIsProcessing(true);
 			await assignTechnician(selectedTicket.id, assignEmail);
 			setFeedback({ type: "success", text: "Technician assigned successfully." });
 			await loadTickets();
 			await loadTicketDetails(selectedTicket.id);
 		} catch (error) {
 			setFeedback({ type: "error", text: getErrorMessage(error) });
+		} finally {
+			setIsProcessing(false);
 		}
 	}
 
@@ -152,12 +156,15 @@ function TicketsPage() {
 			return;
 		}
 		try {
+			setIsProcessing(true);
 			await updateTicketStatus(selectedTicket.id, statusAction, resolutionNotes);
 			setFeedback({ type: "success", text: `Ticket status updated to ${statusAction}.` });
 			await loadTickets();
 			await loadTicketDetails(selectedTicket.id);
 		} catch (error) {
 			setFeedback({ type: "error", text: getErrorMessage(error) });
+		} finally {
+			setIsProcessing(false);
 		}
 	}
 
@@ -435,7 +442,20 @@ function TicketsPage() {
 						<p>Loading details...</p>
 					) : (
 						<>
-							<div className="catalogue-grid" style={{ marginTop: "12px", borderTop: "1px solid #f1f5f9", paddingTop: "12px" }}>
+							<div className="lifecycle-stepper">
+								{["OPEN", "IN_PROGRESS", "RESOLVED", "CLOSED"].map((step, index) => {
+									const isCompleted = statuses.indexOf(selectedTicket.status) >= statuses.indexOf(step) && selectedTicket.status !== "REJECTED";
+									const isActive = selectedTicket.status === step;
+									return (
+										<div key={step} className={`step ${isCompleted ? "completed" : ""} ${isActive ? "active" : ""}`}>
+											{index + 1}
+											<span className="step-label">{step.replace("_", " ")}</span>
+										</div>
+									);
+								})}
+							</div>
+
+							<div className="catalogue-grid" style={{ marginTop: "32px", borderTop: "1px solid #f1f5f9", paddingTop: "12px" }}>
 								<div>
 									<p style={{ margin: "0 0 4px" }}><strong>Category:</strong> {selectedTicket.category}</p>
 									<p style={{ margin: 0, color: "#5b6d86" }}>{selectedTicket.description}</p>
@@ -455,8 +475,12 @@ function TicketsPage() {
 											<input value={assignEmail} onChange={(e) => setAssignEmail(e.target.value)} type="email" />
 										</label>
 										<div className="form-actions">
-											<button type="button" onClick={handleAssignTechnician}>Assign</button>
-											<button type="button" className="small-btn danger" onClick={handleReject}>Reject</button>
+											<button type="button" onClick={handleAssignTechnician} disabled={isProcessing}>
+												{isProcessing ? "Processing..." : "Assign"}
+											</button>
+											<button type="button" className="small-btn danger" onClick={handleReject} disabled={isProcessing}>
+												Reject
+											</button>
 										</div>
 
 										<label>
@@ -473,25 +497,38 @@ function TicketsPage() {
 											<span>Resolution Notes</span>
 											<input value={resolutionNotes} onChange={(e) => setResolutionNotes(e.target.value)} />
 										</label>
-										<button type="button" onClick={handleStatusUpdate}>Update Status</button>
+										<button type="button" onClick={handleStatusUpdate} disabled={isProcessing}>
+											{isProcessing ? "Updating..." : "Update Status"}
+										</button>
 									</div>
 								</div>
 
 								<div className="panel-card">
-									<h4>Attachments (max 3 images)</h4>
-									<div className="form-grid">
-										<label>
-											<span>Upload By</span>
-											<input value={uploadBy} onChange={(e) => setUploadBy(e.target.value)} type="email" />
-										</label>
-										<input type="file" accept="image/*" onChange={handleUploadAttachment} />
-										<ul>
-											{attachments.map((attachment) => (
-												<li key={attachment.id}>
-													{attachment.fileName} ({Math.round((attachment.fileSize || 0) / 1024)} KB)
-												</li>
-											))}
-										</ul>
+									<h4>Attachments</h4>
+									<label className="upload-area">
+										<p style={{ margin: 0, fontSize: "0.9rem", color: "#64748b" }}>
+											<strong>Click to upload</strong> evidence images
+										</p>
+										<input type="file" accept="image/*" onChange={handleUploadAttachment} style={{ display: "none" }} />
+									</label>
+
+									<div className="attachment-grid">
+										{attachments.map((attachment) => (
+											<div key={attachment.id} className="attachment-card">
+												<span className="file-icon">🖼️</span>
+												<span className="file-name" title={attachment.fileName}>
+													{attachment.fileName}
+												</span>
+												<span className="file-size">
+													{Math.round((attachment.fileSize || 0) / 1024)} KB
+												</span>
+											</div>
+										))}
+										{attachments.length === 0 && (
+											<p style={{ gridColumn: "1/-1", fontSize: "0.8rem", color: "#94a3b8", textAlign: "center", margin: "10px 0" }}>
+												No attachments uploaded.
+											</p>
+										)}
 									</div>
 								</div>
 							</div>
