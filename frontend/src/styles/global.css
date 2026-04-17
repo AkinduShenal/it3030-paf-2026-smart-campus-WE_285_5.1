@@ -114,8 +114,18 @@ body {
 	background: #ffffff;
 	border: 1px solid #e5ebf3;
 	border-radius: 12px;
-	padding: 16px;
-	box-shadow: 0 2px 8px rgba(15, 31, 58, 0.06);
+	padding: 20px;
+	box-shadow: 0 4px 14px rgba(15, 31, 58, 0.05);
+	transition: all 0.3s ease;
+}
+
+.panel-card:hover {
+	box-shadow: 0 6px 20px rgba(15, 31, 58, 0.08);
+}
+
+.panel-card.technician-view {
+	background: linear-gradient(180deg, #ffffff 0%, #f9fbff 100%);
+	border-left: 4px solid #1f3a69;
 }
 
 .panel-card h3 {
@@ -212,9 +222,23 @@ button:disabled {
 }
 
 .ghost-btn {
-	background: #eef3fb;
+	background: #ffffff;
 	color: #1f3a69;
 	border: 1px solid #c8d6ea;
+}
+
+.icon-btn {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	justify-content: center;
+}
+
+.icon-wrapper {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	color: #1f3a69;
 }
 
 .feedback {
