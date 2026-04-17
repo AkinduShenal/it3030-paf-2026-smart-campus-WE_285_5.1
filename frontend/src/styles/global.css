@@ -146,6 +146,18 @@ body {
 	border-radius: 8px;
 	border: 1px solid #cbd6e5;
 	font-size: 0.95rem;
+	transition: all 0.2s ease;
+	background: #ffffff;
+}
+
+.form-grid input:focus,
+.form-grid select:focus,
+.form-grid textarea:focus,
+.filter-grid input:focus {
+	outline: none;
+	border-color: #1f3a69;
+	box-shadow: 0 0 0 4px rgba(31, 58, 105, 0.1);
+	background: #fff;
 }
 
 .form-grid textarea {
@@ -255,10 +267,11 @@ tr:hover td {
 }
 
 th {
-	font-size: 0.78rem;
+	font-size: 0.72rem;
+	font-weight: 600;
 	text-transform: uppercase;
-	letter-spacing: 0.03em;
-	color: #5b6d86;
+	letter-spacing: 0.05em;
+	color: #64748b;
 }
 
 .status-chip {
@@ -582,6 +595,16 @@ th {
 
 .step.active .step-label {
 	color: #1f3a69;
+}
+
+/* Animations */
+@keyframes fadeIn {
+	from { opacity: 0; transform: translateY(8px); }
+	to { opacity: 1; transform: translateY(0); }
+}
+
+.fade-in {
+	animation: fadeIn 0.4s ease-out forwards;
 }
 
 @media (max-width: 1100px) {

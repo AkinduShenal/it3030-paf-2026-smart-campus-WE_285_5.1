@@ -273,11 +273,11 @@ function TicketsPage() {
 					<form className="form-grid" onSubmit={handleCreateTicket}>
 						<label>
 							<span>Category</span>
-							<input name="category" value={ticketForm.category} onChange={onTicketFormChange} required />
+							<input name="category" value={ticketForm.category} onChange={onTicketFormChange} placeholder="e.g. PROJECTOR, HVAC" required />
 						</label>
 						<label>
 							<span>Description</span>
-							<input name="description" value={ticketForm.description} onChange={onTicketFormChange} required />
+							<input name="description" value={ticketForm.description} onChange={onTicketFormChange} placeholder="Describe the issue..." required />
 						</label>
 						<label>
 							<span>Priority</span>
@@ -291,11 +291,11 @@ function TicketsPage() {
 						</label>
 						<label>
 							<span>Resource ID (Optional)</span>
-							<input name="resourceId" value={ticketForm.resourceId} onChange={onTicketFormChange} type="number" min="1" />
+							<input name="resourceId" value={ticketForm.resourceId} onChange={onTicketFormChange} type="number" min="1" placeholder="Resource ID" />
 						</label>
 						<label>
 							<span>Location (Optional)</span>
-							<input name="location" value={ticketForm.location} onChange={onTicketFormChange} />
+							<input name="location" value={ticketForm.location} onChange={onTicketFormChange} placeholder="Room 302, Lab A" />
 						</label>
 						<label>
 							<span>Requester Email</span>
@@ -404,8 +404,8 @@ function TicketsPage() {
 							<tbody>
 								{tickets.map((ticket) => (
 									<tr key={ticket.id}>
-										<td>{ticket.id}</td>
-										<td>{ticket.category}</td>
+										<td style={{ fontWeight: 700, color: "#1f3a69" }}>#{ticket.id}</td>
+										<td style={{ fontWeight: 600 }}>{ticket.category}</td>
 										<td>
 											<span className={`priority-chip ${ticket.priority.toLowerCase().replace("_", "-")}`}>
 												{ticket.priority}
@@ -431,7 +431,7 @@ function TicketsPage() {
 			</article>
 
 			{selectedTicket && (
-				<article className="panel-card" style={{ marginTop: "16px" }}>
+				<article className="panel-card fade-in" style={{ marginTop: "16px" }}>
 					<div className="table-header">
 						<h3>Ticket #{selectedTicket.id} Details</h3>
 						<span className={`status-chip ${selectedTicket.status.toLowerCase().replace("_", "-")}`}>
