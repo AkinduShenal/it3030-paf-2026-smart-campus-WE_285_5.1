@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import "./TicketsPage.css";
 import { fetchCurrentUser } from "../features/auth/authApi";
 
 import {
@@ -312,92 +311,63 @@ function TicketsPage() {
 	}
 
 	return (
-		<div className="tickets-container">
-			<header className="tp-header">
-				<div className="tp-title-group">
-					<h2>Incident Hub</h2>
-					<p>Manage campus incidents with precision and care.</p>
-				</div>
-				<div className="tp-header-actions">
-					<button className="tp-btn tp-btn-ghost" onClick={() => loadTickets()}>
-						<span style={{ fontSize: "1.2rem" }}>🔄</span> Refresh
-					</button>
-				</div>
+		<section>
+			<header className="section-header">
+				<h2 style={{ margin: 0 }}>Maintenance and Incidents</h2>
+				<p>Report issues, assign technicians, manage lifecycle, and track evidence/comments.</p>
 			</header>
 
-			<div className="tp-dashboard-grid">
-				<article className="glass-card">
-					<h3 style={{ margin: 0, marginBottom: "20px" }}>Create Incident</h3>
+			<div className="catalogue-grid">
+				<article className="panel-card">
+					<h3 style={{ margin: 0, marginBottom: "14px" }}>Create Incident Ticket</h3>
 					<form className="form-grid" onSubmit={handleCreateTicket}>
-						<div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
-							<label>
-								<span>Category</span>
-								<input 
-									className="tp-input"
-									name="category" 
-									value={ticketForm.category} 
-									onChange={onTicketFormChange} 
-									placeholder="e.g. PROJECTOR" 
-									required 
-								/>
-							</label>
-							<label>
-								<span>Priority</span>
-								<select 
-									className="tp-input"
-									name="priority" 
-									value={ticketForm.priority} 
-									onChange={onTicketFormChange}
-								>
-									{priorities.map((priority) => (
-										<option key={priority} value={priority}>
-											{priority}
-										</option>
-									))}
-								</select>
-							</label>
-						</div>
+						<label>
+							<span>Category</span>
+							<input name="category" value={ticketForm.category} onChange={onTicketFormChange} placeholder="e.g. PROJECTOR, HVAC" required />
+						</label>
 						<label>
 							<span>Description</span>
-							<input 
-								className="tp-input"
-								name="description" 
-								value={ticketForm.description} 
-								onChange={onTicketFormChange} 
-								placeholder="Describe the issue..." 
-								required 
-							/>
+							<input name="description" value={ticketForm.description} onChange={onTicketFormChange} placeholder="Describe the issue..." required />
 						</label>
-						<div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
-							<label>
-								<span>Resource ID (Optional)</span>
-								<input className="tp-input" name="resourceId" value={ticketForm.resourceId} onChange={onTicketFormChange} type="number" min="1" placeholder="Resource ID" />
-							</label>
-							<label>
-								<span>Location (Optional)</span>
-								<input className="tp-input" name="location" value={ticketForm.location} onChange={onTicketFormChange} placeholder="Room 302, Lab A" />
-							</label>
-						</div>
-						<div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
-							<label>
-								<span>Requester</span>
-								<input className="tp-input" name="requesterEmail" value={ticketForm.requesterEmail} onChange={onTicketFormChange} type="email" required />
-							</label>
-							<label>
-								<span>Contact</span>
-								<input className="tp-input" name="preferredContact" value={ticketForm.preferredContact} onChange={onTicketFormChange} required />
-							</label>
-						</div>
-						<div className="form-actions" style={{ marginTop: "12px" }}>
-							<button type="submit" className="tp-btn tp-btn-primary" style={{ flex: 1 }}>
+						<label>
+							<span>Priority</span>
+							<select name="priority" value={ticketForm.priority} onChange={onTicketFormChange}>
+								{priorities.map((priority) => (
+									<option key={priority} value={priority}>
+										{priority}
+									</option>
+								))}
+							</select>
+						</label>
+						<label>
+							<span>Resource ID (Optional)</span>
+							<input name="resourceId" value={ticketForm.resourceId} onChange={onTicketFormChange} type="number" min="1" placeholder="Resource ID" />
+						</label>
+						<label>
+							<span>Location (Optional)</span>
+							<input name="location" value={ticketForm.location} onChange={onTicketFormChange} placeholder="Room 302, Lab A" />
+						</label>
+						<label>
+							<span>Requester Email</span>
+							<input name="requesterEmail" value={ticketForm.requesterEmail} onChange={onTicketFormChange} type="email" required />
+						</label>
+						<label>
+							<span>Preferred Contact</span>
+							<input name="preferredContact" value={ticketForm.preferredContact} onChange={onTicketFormChange} required />
+						</label>
+						<div className="form-actions">
+							<button type="submit">
 								Create Ticket
+							</button>
+							<button type="button" className="ghost-btn" onClick={() => loadTickets()}>
+								Refresh List
 							</button>
 						</div>
 					</form>
 				</article>
 
-				<article className="glass-card">
-					<h3 style={{ margin: 0, marginBottom: "20px" }}>Quick Filters</h3>
+				<article className="panel-card">
+					<h3 style={{ margin: 0, marginBottom: "14px" }}>Ticket Filters</h3>
 					<form
 						className="filter-grid"
 						onSubmit={(event) => {
@@ -405,52 +375,48 @@ function TicketsPage() {
 							loadTickets(filters);
 						}}
 					>
-						<div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
-							<label>
-								<span>Status</span>
-								<select className="tp-input" name="status" value={filters.status} onChange={onFilterChange}>
-									<option value="">All Statuses</option>
-									{statuses.map((status) => (
-										<option key={status} value={status}>
-											{status}
-										</option>
-									))}
-								</select>
-							</label>
-							<label>
-								<span>Priority</span>
-								<select className="tp-input" name="priority" value={filters.priority} onChange={onFilterChange}>
-									<option value="">All Priorities</option>
-									{priorities.map((priority) => (
-										<option key={priority} value={priority}>
-											{priority}
-										</option>
-									))}
-								</select>
-							</label>
-						</div>
+						<label>
+							<span>Status</span>
+							<select name="status" value={filters.status} onChange={onFilterChange}>
+								<option value="">All</option>
+								{statuses.map((status) => (
+									<option key={status} value={status}>
+										{status}
+									</option>
+								))}
+							</select>
+						</label>
+						<label>
+							<span>Priority</span>
+							<select name="priority" value={filters.priority} onChange={onFilterChange}>
+								<option value="">All</option>
+								{priorities.map((priority) => (
+									<option key={priority} value={priority}>
+										{priority}
+									</option>
+								))}
+							</select>
+						</label>
 						<label>
 							<span>Requester Email</span>
-							<input className="tp-input" name="requesterEmail" value={filters.requesterEmail} onChange={onFilterChange} type="email" placeholder="Search by requester..." />
+							<input name="requesterEmail" value={filters.requesterEmail} onChange={onFilterChange} type="email" />
 						</label>
 						<label>
 							<span>Technician Email</span>
 							<input
-								className="tp-input"
 								name="assignedTechnicianEmail"
 								value={filters.assignedTechnicianEmail}
 								onChange={onFilterChange}
 								type="email"
-								placeholder="Search by technician..."
 							/>
 						</label>
-						<div className="form-actions" style={{ marginTop: "12px" }}>
-							<button type="submit" className="tp-btn tp-btn-primary" style={{ flex: 1 }}>
-								Apply Filters
+						<div className="form-actions">
+							<button type="submit">
+								Apply
 							</button>
 							<button
 								type="button"
-								className="tp-btn tp-btn-ghost"
+								className="ghost-btn"
 								onClick={() => {
 									setFilters(initialFilters);
 									loadTickets(initialFilters);
@@ -467,22 +433,18 @@ function TicketsPage() {
 				<p className={feedback.type === "error" ? "feedback error" : "feedback success"}>{feedback.text}</p>
 			)}
 
-			<article className="tp-table-container fade-in">
-				<div className="table-header" style={{ padding: "16px 20px" }}>
-					<h3 style={{ margin: 0 }}>Active Tickets</h3>
-					<span style={{ fontSize: "0.85rem", color: "#64748b", fontWeight: 600 }}>{tickets.length} record(s) found</span>
+			<article className="panel-card">
+				<div className="table-header">
+					<h3>Tickets</h3>
+					<span>{tickets.length} item(s)</span>
 				</div>
 				{isLoadingList ? (
-					<div style={{ padding: "40px", textAlign: "center", color: "#64748b" }}>
-						<p>Loading tickets...</p>
-					</div>
+					<p>Loading tickets...</p>
 				) : tickets.length === 0 ? (
-					<div style={{ padding: "40px", textAlign: "center", color: "#64748b" }}>
-						<p>No tickets were found matching your criteria.</p>
-					</div>
+					<p>No tickets loaded yet. Use refresh or create one.</p>
 				) : (
 					<div className="table-wrap">
-						<table className="tp-table">
+						<table>
 							<thead>
 								<tr>
 									<th>ID</th>
@@ -495,23 +457,23 @@ function TicketsPage() {
 							</thead>
 							<tbody>
 								{tickets.map((ticket) => (
-									<tr key={ticket.id} onClick={() => loadTicketDetails(ticket.id)}>
-										<td style={{ fontWeight: 800, color: "#1f3a69" }}>#{ticket.id}</td>
+									<tr key={ticket.id}>
+										<td style={{ fontWeight: 700, color: "#1f3a69" }}>#{ticket.id}</td>
 										<td style={{ fontWeight: 600 }}>{ticket.category}</td>
 										<td>
-											<span className={`tp-priority ${ticket.priority.toLowerCase()}`}>
+											<span className={`priority-chip ${ticket.priority.toLowerCase().replace("_", "-")}`}>
 												{ticket.priority}
 											</span>
 										</td>
 										<td>
-											<span className={`tp-chip ${ticket.status.toLowerCase().replace("_", "-")}`}>
+											<span className={`status-chip ${ticket.status.toLowerCase().replace("_", "-")}`}>
 												{ticket.status}
 											</span>
 										</td>
 										<td>{ticket.requesterEmail}</td>
 										<td>
-											<button type="button" className="tp-btn tp-btn-ghost small-btn">
-												Inspect
+											<button type="button" className="small-btn" onClick={() => loadTicketDetails(ticket.id)}>
+												Open
 											</button>
 										</td>
 									</tr>
@@ -523,123 +485,113 @@ function TicketsPage() {
 			</article>
 
 			{selectedTicket && (
-				<article className="tp-details-panel fade-in">
-					<div className="table-header" style={{ marginBottom: "24px" }}>
-						<h3 style={{ margin: 0, fontSize: "1.5rem" }}>Ticket #{selectedTicket.id} <span style={{ color: "#94a3b8", fontWeight: 400 }}>Inspection</span></h3>
-						<span className={`tp-chip ${selectedTicket.status.toLowerCase().replace("_", "-")}`} style={{ padding: "6px 16px", fontSize: "0.85rem" }}>
+				<article className="panel-card fade-in" style={{ marginTop: "16px" }}>
+					<div className="table-header">
+						<h3 style={{ margin: 0 }}>Ticket #{selectedTicket.id} Details</h3>
+						<span className={`status-chip ${selectedTicket.status.toLowerCase().replace("_", "-")}`}>
 							{selectedTicket.status}
 						</span>
 					</div>
-					
 					{isLoadingDetails ? (
-						<div style={{ padding: "40px", textAlign: "center" }}>Loading details...</div>
+						<p>Loading details...</p>
 					) : (
 						<>
-							<div className="tp-stepper">
-								{["OPEN", "IN_PROGRESS", "RESOLVED", "CLOSED"].map((step, index) => {
-									const isCompleted = statuses.indexOf(selectedTicket.status) >= statuses.indexOf(step) && selectedTicket.status !== "REJECTED";
-									const isActive = selectedTicket.status === step;
-									return (
-										<div key={step} className={`tp-step-item ${isCompleted ? "completed" : ""} ${isActive ? "active" : ""}`}>
-											<div className="tp-step-bar">
-												<div className="tp-step-progress" style={{ width: isCompleted ? "100%" : "0%" }}></div>
-											</div>
-											<span className="tp-step-label">{step.replace("_", " ")}</span>
-										</div>
-									);
-								})}
-							</div>
+					<div className="lifecycle-stepper">
+						{["OPEN", "IN_PROGRESS", "RESOLVED", "CLOSED"].map((step, index) => {
+							const isCompleted = statuses.indexOf(selectedTicket.status) >= statuses.indexOf(step) && selectedTicket.status !== "REJECTED";
+							const isActive = selectedTicket.status === step;
+							return (
+								<div key={step} className={`step ${isCompleted ? "completed" : ""} ${isActive ? "active" : ""}`}>
+									{index + 1}
+									<span className="step-label">{step.replace("_", " ")}</span>
+								</div>
+							);
+						})}
+					</div>
 
-							<div className="tp-details-grid" style={{ marginBottom: "40px" }}>
-								<div className="tp-detail-section">
-									<h4>Categorization</h4>
-									<div className="tp-detail-content" style={{ fontSize: "1.1rem", marginBottom: "8px" }}>{selectedTicket.category}</div>
-									<div style={{ color: "#64748b" }}>{selectedTicket.description}</div>
+							<div className="catalogue-grid" style={{ marginTop: "32px", borderTop: "1px solid #f1f5f9", paddingTop: "12px" }}>
+								<div>
+									<p style={{ margin: "0 0 4px" }}><strong>Category:</strong> {selectedTicket.category}</p>
+									<p style={{ margin: 0, color: "#5b6d86" }}>{selectedTicket.description}</p>
 								</div>
-								<div className="tp-detail-section">
-									<h4>Location & Asset</h4>
-									<div className="tp-detail-content">{selectedTicket.location || "N/A"}</div>
-									<div style={{ color: "#64748b", marginTop: "4px" }}>Resource: {selectedTicket.resourceName || "None"}</div>
-								</div>
-								<div className="tp-detail-section">
-									<h4>Timestamps</h4>
-									<div style={{ color: "#64748b" }}>Created: {formatTimestamp(selectedTicket.createdAt)}</div>
-									<div style={{ color: "#64748b", marginTop: "4px" }}>Updated: {formatTimestamp(selectedTicket.updatedAt)}</div>
+								<div>
+									<p style={{ margin: "0 0 4px" }}><strong>Location:</strong> {selectedTicket.location || "Not specified"}</p>
+									<p style={{ margin: 0 }}><strong>Resource:</strong> {selectedTicket.resourceName || "-"}</p>
 								</div>
 							</div>
 
-							<div className="tp-dashboard-grid">
-								<div className="glass-card">
-									<h4 style={{ margin: 0, marginBottom: "20px" }}>Management Actions</h4>
+							<div style={{ marginTop: "12px", borderTop: "1px solid #f1f5f9", paddingTop: "12px", fontSize: "0.85rem", color: "#64748b" }}>
+								<p style={{ margin: 0 }}>
+									Created: {formatTimestamp(selectedTicket.createdAt)} | Last Updated: {formatTimestamp(selectedTicket.updatedAt)}
+								</p>
+							</div>
+
+							<div className="catalogue-grid">
+								<div className="panel-card technician-view">
+									<h4 style={{ margin: 0, marginBottom: "14px" }}>Technician + Status Actions</h4>
 									<div className="form-grid">
-										<div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: "12px", alignItems: "end" }}>
-											<label>
-												<span>Assign Technician</span>
-												<input className="tp-input" value={assignEmail} onChange={(e) => setAssignEmail(e.target.value)} type="email" placeholder="Email..." />
-											</label>
-											<button className="tp-btn tp-btn-primary" onClick={handleAssignTechnician} disabled={isProcessing}>
-												{isProcessing ? "..." : "Assign"}
+										<label>
+											<span>Technician Email</span>
+											<input value={assignEmail} onChange={(e) => setAssignEmail(e.target.value)} type="email" />
+										</label>
+										<div className="form-actions">
+											<button type="button" onClick={handleAssignTechnician} disabled={isProcessing}>
+												{isProcessing ? "Processing..." : "Assign"}
 											</button>
-										</div>
-										
-										{!isRejecting ? (
-											<button
-												type="button"
-												className="tp-btn tp-btn-ghost"
-												style={{ color: "#ef4444", borderColor: "#fecaca" }}
-												onClick={() => setIsRejecting(true)}
-												disabled={isProcessing}
-											>
-												Reject Ticket
-											</button>
-										) : (
-											<div className="fade-in" style={{ background: "#fff1f2", padding: "16px", borderRadius: "12px", border: "1px solid #fecaca" }}>
-												<textarea
-													className="tp-input"
-													placeholder="Reason for rejection..."
-													value={rejectionReason}
-													onChange={(e) => setRejectionReason(e.target.value)}
-													autoFocus
-													style={{ marginBottom: "12px" }}
-												/>
-												<div className="form-actions">
-													<button className="tp-btn tp-btn-primary" style={{ background: "#ef4444" }} onClick={handleReject} disabled={isProcessing}>
-														Confirm Reject
-													</button>
-													<button className="tp-btn tp-btn-ghost" onClick={() => setIsRejecting(false)}>
-														Cancel
-													</button>
+											{!isRejecting ? (
+												<button
+													type="button"
+													className="small-btn danger"
+													onClick={() => setIsRejecting(true)}
+													disabled={isProcessing}
+												>
+													Reject
+												</button>
+											) : (
+												<div style={{ width: "100%", display: "grid", gap: "8px", marginTop: "10px" }}>
+													<textarea
+														placeholder="Reason for rejection..."
+														value={rejectionReason}
+														onChange={(e) => setRejectionReason(e.target.value)}
+														autoFocus
+													/>
+													<div className="form-actions">
+														<button type="button" className="small-btn danger" onClick={handleReject} disabled={isProcessing}>
+															Confirm Reject
+														</button>
+														<button type="button" className="ghost-btn" onClick={() => setIsRejecting(false)}>
+															Cancel
+														</button>
+													</div>
 												</div>
-											</div>
-										)}
-
-										<div style={{ borderTop: "1px solid #f1f5f9", margin: "10px 0", paddingTop: "20px" }}>
-											<label>
-												<span>Update Status</span>
-												<select className="tp-input" value={statusAction} onChange={(e) => setStatusAction(e.target.value)}>
-													{statuses.map((status) => (
-														<option key={status} value={status}>
-															{status}
-														</option>
-													))}
-												</select>
-											</label>
+											)}
 										</div>
+
+										<label>
+											<span>Next Status</span>
+											<select value={statusAction} onChange={(e) => setStatusAction(e.target.value)}>
+												{statuses.map((status) => (
+													<option key={status} value={status}>
+														{status}
+													</option>
+												))}
+											</select>
+										</label>
 										<label>
 											<span>Resolution Notes</span>
-											<input className="tp-input" value={resolutionNotes} onChange={(e) => setResolutionNotes(e.target.value)} placeholder="What was done?" />
+											<input value={resolutionNotes} onChange={(e) => setResolutionNotes(e.target.value)} />
 										</label>
-										<button className="tp-btn tp-btn-primary" onClick={handleStatusUpdate} disabled={isProcessing}>
-											{isProcessing ? "Updating..." : "Update Lifecycle"}
+										<button type="button" onClick={handleStatusUpdate} disabled={isProcessing}>
+											{isProcessing ? "Updating..." : "Update Status"}
 										</button>
 									</div>
 								</div>
 
-								<div className="glass-card">
-									<h4 style={{ margin: 0, marginBottom: "20px" }}>Attachments</h4>
+								<div className="panel-card">
+									<h4 style={{ margin: 0, marginBottom: "14px" }}>Attachments</h4>
 									<label className="upload-area">
 										<p style={{ margin: 0, fontSize: "0.9rem", color: "#64748b" }}>
-											<strong>Drop or Click</strong> to upload evidence
+											<strong>Click to upload</strong> evidence images
 										</p>
 										<input type="file" accept="image/*" onChange={handleUploadAttachment} style={{ display: "none" }} />
 									</label>
@@ -657,93 +609,82 @@ function TicketsPage() {
 											</div>
 										))}
 										{attachments.length === 0 && (
-											<div style={{ gridColumn: "1/-1", padding: "20px", textAlign: "center", color: "#94a3b8", fontSize: "0.85rem" }}>
-												No files attached yet.
-											</div>
+											<p style={{ gridColumn: "1/-1", fontSize: "0.8rem", color: "#94a3b8", textAlign: "center", margin: "10px 0" }}>
+												No attachments uploaded.
+											</p>
 										)}
 									</div>
 								</div>
 							</div>
 
-							<div className="tp-comments-container">
-								<h4 style={{ margin: 0, marginBottom: "24px", fontSize: "1.2rem" }}>Discussion</h4>
-								<form className="form-grid" style={{ marginBottom: "32px" }} onSubmit={handleAddComment}>
-									<div style={{ display: "grid", gridTemplateColumns: "1fr 2fr auto", gap: "12px", alignItems: "end" }}>
-										<label>
-											<span>Your Email</span>
-											<input className="tp-input" name="authorEmail" value={commentForm.authorEmail} onChange={onCommentChange} type="email" />
-										</label>
-										<label>
-											<span>New Comment</span>
-											<input className="tp-input" name="content" value={commentForm.content} onChange={onCommentChange} placeholder="Add a note..." required />
-										</label>
-										<button className="tp-btn tp-btn-primary" type="submit">Post</button>
-									</div>
+							<div className="panel-card" style={{ marginTop: "14px" }}>
+								<h4 style={{ margin: 0, marginBottom: "14px" }}>Comments</h4>
+								<form className="form-grid" onSubmit={handleAddComment}>
+									<label>
+										<span>Author Email</span>
+										<input name="authorEmail" value={commentForm.authorEmail} onChange={onCommentChange} type="email" />
+									</label>
+									<label>
+										<span>Comment</span>
+										<input name="content" value={commentForm.content} onChange={onCommentChange} required />
+									</label>
+									<button type="submit">Add Comment</button>
 								</form>
 
 								{comments.length === 0 ? (
-									<div style={{ textAlign: "center", color: "#94a3b8", padding: "20px" }}>No comments yet. Be the first to speak!</div>
+									<p style={{ marginTop: "10px" }}>No comments yet.</p>
 								) : (
-									<div className="comment-list">
+									<ul className="comment-list">
 										{comments.map((comment) => (
-											<div key={comment.id} className="tp-comment-card fade-in">
-												<div className="tp-comment-avatar">
-													{comment.authorEmail.substring(0, 1).toUpperCase()}
-												</div>
-												<div className="tp-comment-body">
-													<div className="tp-comment-meta">{comment.authorEmail}</div>
-													{editingCommentId === comment.id ? (
-														<div style={{ marginTop: "8px" }}>
-															<textarea
-																className="tp-input"
-																value={editCommentContent}
-																onChange={(e) => setEditCommentContent(e.target.value)}
-																autoFocus
-																style={{ marginBottom: "12px" }}
-															/>
-															<div className="form-actions">
-																<button className="tp-btn tp-btn-primary small-btn" onClick={() => handleSaveEditComment(comment)}>
-																	Save
-																</button>
-																<button className="tp-btn tp-btn-ghost small-btn" onClick={() => setEditingCommentId(null)}>
-																	Cancel
-																</button>
-															</div>
+											<li key={comment.id} className="comment-item">
+												<span className="comment-author">{comment.authorEmail}</span>
+												{editingCommentId === comment.id ? (
+													<div style={{ marginTop: "8px", display: "grid", gap: "8px" }}>
+														<textarea
+															value={editCommentContent}
+															onChange={(e) => setEditCommentContent(e.target.value)}
+															autoFocus
+														/>
+														<div className="form-actions">
+															<button type="button" className="small-btn" onClick={() => handleSaveEditComment(comment)}>
+																Save
+															</button>
+															<button type="button" className="ghost-btn" onClick={() => setEditingCommentId(null)}>
+																Cancel
+															</button>
 														</div>
-													) : (
-														<>
-															<div className="tp-comment-text" style={{ color: "#334155", lineHeight: "1.5" }}>{comment.content}</div>
-															<div className="form-actions" style={{ marginTop: "12px" }}>
-																<button
-																	type="button"
-																	className="tp-btn tp-btn-ghost small-btn"
-																	style={{ height: "28px", padding: "0 8px", fontSize: "0.75rem" }}
-																	onClick={() => startEditComment(comment)}
-																>
-																	Edit
-																</button>
-																<button
-																	type="button"
-																	className="tp-btn tp-btn-ghost small-btn"
-																	style={{ height: "28px", padding: "0 8px", fontSize: "0.75rem", border: "none", color: "#ef4444" }}
-																	onClick={() => handleDeleteComment(comment)}
-																>
-																	Delete
-																</button>
-															</div>
-														</>
-													)}
-												</div>
-											</div>
+													</div>
+												) : (
+													<>
+														<p className="comment-content">{comment.content}</p>
+														<div className="form-actions" style={{ marginTop: "8px" }}>
+															<button
+																type="button"
+																className="small-btn ghost-btn"
+																onClick={() => startEditComment(comment)}
+															>
+																Edit
+															</button>
+															<button
+																type="button"
+																className="small-btn danger"
+																onClick={() => handleDeleteComment(comment)}
+															>
+																Delete
+															</button>
+														</div>
+													</>
+												)}
+											</li>
 										))}
-									</div>
+									</ul>
 								)}
 							</div>
 						</>
 					)}
 				</article>
 			)}
-		</div>
+		</section>
 	);
 }
 
