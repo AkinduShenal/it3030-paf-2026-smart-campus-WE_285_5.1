@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { fetchCurrentUser } from "../features/auth/authApi";
+import { useAuth } from "../context/AuthContext";
 
 import {
 	addComment,
@@ -32,8 +33,8 @@ const initialTicketForm = {
 	priority: "MEDIUM",
 	resourceId: "",
 	location: "",
-	requesterEmail: "student1@smartcampus.local",
-	preferredContact: "student1@smartcampus.local"
+	requesterEmail: "",
+	preferredContact: ""
 };
 
 const initialFilters = {
@@ -44,7 +45,7 @@ const initialFilters = {
 };
 
 const initialCommentForm = {
-	authorEmail: "student1@smartcampus.local",
+	authorEmail: "",
 	content: ""
 };
 
@@ -60,6 +61,8 @@ function getErrorMessage(error) {
 }
 
 function TicketsPage() {
+	const { profile, hasAnyRole } = useAuth();
+	const canManageTickets = hasAnyRole(["ADMIN", "TECHNICIAN"]);
 	const [ticketForm, setTicketForm] = useState(initialTicketForm);
 	const [filters, setFilters] = useState(initialFilters);
 	const [tickets, setTickets] = useState([]);
@@ -67,10 +70,10 @@ function TicketsPage() {
 	const [comments, setComments] = useState([]);
 	const [attachments, setAttachments] = useState([]);
 	const [commentForm, setCommentForm] = useState(initialCommentForm);
-	const [assignEmail, setAssignEmail] = useState("tech1@smartcampus.local");
+	const [assignEmail, setAssignEmail] = useState("");
 	const [statusAction, setStatusAction] = useState("IN_PROGRESS");
 	const [resolutionNotes, setResolutionNotes] = useState("");
-	const [uploadBy, setUploadBy] = useState("tech1@smartcampus.local");
+	const [uploadBy, setUploadBy] = useState("");
 	const [feedback, setFeedback] = useState({ type: "", text: "" });
 	const [isLoadingList, setIsLoadingList] = useState(false);
 	const [isLoadingDetails, setIsLoadingDetails] = useState(false);
@@ -106,6 +109,20 @@ function TicketsPage() {
 			active = false;
 		};
 	}, []);
+
+	useEffect(() => {
+		if (!profile?.email) {
+			return;
+		}
+		setTicketForm((prev) => ({
+			...prev,
+			requesterEmail: profile.email,
+			preferredContact: prev.preferredContact || profile.email
+		}));
+		setCommentForm((prev) => ({ ...prev, authorEmail: profile.email }));
+		setAssignEmail((prev) => prev || profile.email);
+		setUploadBy((prev) => prev || profile.email);
+	}, [profile]);
 
 	function onTicketFormChange(event) {
 		const { name, value } = event.target;
@@ -160,8 +177,8 @@ function TicketsPage() {
 			priority: ticketForm.priority,
 			resourceId: ticketForm.resourceId ? Number(ticketForm.resourceId) : null,
 			location: ticketForm.location || null,
-			requesterEmail: ticketForm.requesterEmail,
-			preferredContact: ticketForm.preferredContact
+			requesterEmail: profile?.email || ticketForm.requesterEmail,
+			preferredContact: ticketForm.preferredContact || profile?.email || ticketForm.requesterEmail
 		};
 
 		try {
@@ -175,7 +192,7 @@ function TicketsPage() {
 	}
 
 	async function handleAssignTechnician() {
-		if (!selectedTicket) {
+		if (!selectedTicket || !canManageTickets) {
 			return;
 		}
 		try {
@@ -192,7 +209,7 @@ function TicketsPage() {
 	}
 
 	async function handleStatusUpdate() {
-		if (!selectedTicket) {
+		if (!selectedTicket || !canManageTickets) {
 			return;
 		}
 		try {
@@ -236,7 +253,10 @@ function TicketsPage() {
 		}
 
 		try {
-			await addComment(selectedTicket.id, commentForm);
+			await addComment(selectedTicket.id, {
+				...commentForm,
+				authorEmail: profile?.email || commentForm.authorEmail
+			});
 			setCommentForm((prev) => ({ ...prev, content: "" }));
 			setFeedback({ type: "success", text: "Comment added." });
 			setComments(await fetchComments(selectedTicket.id));
@@ -302,7 +322,7 @@ function TicketsPage() {
 		}
 
 		try {
-			await uploadAttachment(selectedTicket.id, uploadBy, file);
+			await uploadAttachment(selectedTicket.id, profile?.email || uploadBy, file);
 			setFeedback({ type: "success", text: "Attachment uploaded." });
 			setAttachments(await fetchAttachments(selectedTicket.id));
 		} catch (error) {
@@ -349,7 +369,7 @@ function TicketsPage() {
 						</label>
 						<label>
 							<span>Requester Email</span>
-							<input name="requesterEmail" value={ticketForm.requesterEmail} onChange={onTicketFormChange} type="email" required />
+							<input name="requesterEmail" value={profile?.email || ticketForm.requesterEmail} type="email" readOnly required />
 						</label>
 						<label>
 							<span>Preferred Contact</span>
@@ -527,7 +547,8 @@ function TicketsPage() {
 							</div>
 
 							<div className="catalogue-grid">
-								<div className="panel-card technician-view">
+								{canManageTickets && (
+									<div className="panel-card technician-view">
 									<h4 style={{ margin: 0, marginBottom: "14px" }}>Technician + Status Actions</h4>
 									<div className="form-grid">
 										<label>
@@ -585,7 +606,8 @@ function TicketsPage() {
 											{isProcessing ? "Updating..." : "Update Status"}
 										</button>
 									</div>
-								</div>
+									</div>
+								)}
 
 								<div className="panel-card">
 									<h4 style={{ margin: 0, marginBottom: "14px" }}>Attachments</h4>
@@ -622,7 +644,7 @@ function TicketsPage() {
 								<form className="form-grid" onSubmit={handleAddComment}>
 									<label>
 										<span>Author Email</span>
-										<input name="authorEmail" value={commentForm.authorEmail} onChange={onCommentChange} type="email" />
+										<input name="authorEmail" value={profile?.email || commentForm.authorEmail} type="email" readOnly />
 									</label>
 									<label>
 										<span>Comment</span>
@@ -687,5 +709,6 @@ function TicketsPage() {
 		</section>
 	);
 }
+
 
 export default TicketsPage;

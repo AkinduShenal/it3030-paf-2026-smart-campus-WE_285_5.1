@@ -1,15 +1,17 @@
 package com.smartcampus.operationshub.service;
 
+import java.time.Instant;
+import java.util.List;
+import java.util.Locale;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.smartcampus.operationshub.dto.NotificationResponse;
 import com.smartcampus.operationshub.entity.Notification;
 import com.smartcampus.operationshub.entity.NotificationType;
 import com.smartcampus.operationshub.exception.NotificationNotFoundException;
 import com.smartcampus.operationshub.repository.NotificationRepository;
-import java.time.Instant;
-import java.util.List;
-import java.util.Locale;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @Transactional
@@ -66,6 +68,27 @@ public class NotificationServiceImpl implements NotificationService {
         }
 
         return toResponse(notificationRepository.save(notification));
+    }
+
+    @Override
+    public NotificationResponse markAsUnread(Long id, String recipientEmail) {
+        Notification notification = notificationRepository.findByIdAndRecipientEmail(id, normalizeEmail(recipientEmail))
+                .orElseThrow(() -> new NotificationNotFoundException("Notification not found for id: " + id));
+
+        if (notification.isRead()) {
+            notification.setRead(false);
+            notification.setReadAt(null);
+        }
+
+        return toResponse(notificationRepository.save(notification));
+    }
+
+    @Override
+    public void deleteNotification(Long id, String recipientEmail) {
+        Notification notification = notificationRepository.findByIdAndRecipientEmail(id, normalizeEmail(recipientEmail))
+                .orElseThrow(() -> new NotificationNotFoundException("Notification not found for id: " + id));
+
+        notificationRepository.delete(notification);
     }
 
     @Override

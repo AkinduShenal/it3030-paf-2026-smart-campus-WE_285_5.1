@@ -1,0 +1,364 @@
+.root {
+	display: grid;
+	gap: 18px;
+	animation: dashboardFadeIn 280ms ease-out;
+}
+
+.hero {
+	position: relative;
+	overflow: hidden;
+	padding: 22px;
+	border-radius: 16px;
+	min-height: 176px;
+	background-size: cover;
+	background-position: center;
+	border: 1px solid #c9d9e9;
+	box-shadow: 0 12px 26px rgba(15, 40, 72, 0.11);
+	isolation: isolate;
+}
+
+.hero::before {
+	content: "";
+	position: absolute;
+	inset: 0;
+	z-index: 0;
+	background:
+		radial-gradient(circle at 82% 18%, rgba(125, 194, 255, 0.22), transparent 34%),
+		radial-gradient(circle at 18% 78%, rgba(111, 227, 205, 0.1), transparent 30%),
+		linear-gradient(135deg, rgba(9, 27, 48, 0.28), rgba(9, 27, 48, 0.05));
+	pointer-events: none;
+}
+
+.heroOverlay {
+	position: absolute;
+	inset: 0;
+	z-index: 1;
+	background:
+		radial-gradient(circle at 82% 18%, rgba(105, 170, 242, 0.14), transparent 26%),
+		radial-gradient(circle at 12% 12%, rgba(142, 216, 255, 0.08), transparent 28%),
+		linear-gradient(122deg, rgba(8, 26, 48, 0.86), rgba(15, 53, 84, 0.68) 52%, rgba(22, 75, 102, 0.48));
+	background-size: 160% 160%, 150% 150%, 100% 100%;
+	animation: heroBackdropShift 18s ease-in-out infinite;
+	pointer-events: none;
+}
+
+.heroAtmosphere {
+	position: absolute;
+	inset: 0;
+	z-index: 2;
+	pointer-events: none;
+	overflow: hidden;
+}
+
+.heroAtmosphere::before,
+.heroAtmosphere::after {
+	content: "";
+	position: absolute;
+	border-radius: 999px;
+	filter: blur(4px);
+	opacity: 0.62;
+	animation: heroOrbFloat 14s ease-in-out infinite;
+}
+
+.heroAtmosphere::before {
+	right: -58px;
+	top: -48px;
+	width: 220px;
+	height: 220px;
+	background: radial-gradient(circle, rgba(128, 191, 255, 0.34) 0%, rgba(128, 191, 255, 0) 70%);
+}
+
+.heroAtmosphere::after {
+	left: -78px;
+	bottom: -74px;
+	width: 210px;
+	height: 210px;
+	background: radial-gradient(circle, rgba(93, 227, 202, 0.16) 0%, rgba(93, 227, 202, 0) 70%);
+	animation-duration: 17s;
+	animation-delay: 1.2s;
+}
+
+.heroContent {
+	position: relative;
+	z-index: 3;
+	display: grid;
+	gap: 9px;
+	max-width: 540px;
+	color: #eef7ff;
+}
+
+.hero h2 {
+	margin: 0;
+	font-size: clamp(1.5rem, 2.1vw, 1.95rem);
+	line-height: 1.15;
+	letter-spacing: -0.01em;
+}
+
+.heroSubtitle {
+	margin: 0;
+	font-size: 0.92rem;
+	line-height: 1.45;
+	color: rgba(231, 244, 255, 0.92);
+}
+
+.heroChip {
+	display: inline-flex;
+	align-items: center;
+	height: 29px;
+	width: fit-content;
+	padding: 0 10px;
+	border-radius: 999px;
+	font-size: 0.73rem;
+	font-weight: 700;
+	background: rgba(213, 235, 255, 0.2);
+	border: 1px solid rgba(216, 236, 255, 0.34);
+	color: #eaf5ff;
+}
+
+.metricsGrid {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(180px, 1fr));
+	gap: 12px;
+}
+
+.metricCard {
+	padding: 14px;
+	border-radius: 12px;
+	background: #ffffff;
+	border: 1px solid #d8e4f2;
+	box-shadow: 0 8px 18px rgba(15, 39, 70, 0.07);
+	transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+}
+
+.metricCard:hover {
+	transform: translateY(-2px);
+	box-shadow: 0 12px 24px rgba(15, 39, 70, 0.1);
+	border-color: #c8daee;
+}
+
+.metricTop {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: 8px;
+}
+
+.metricTop p {
+	margin: 0;
+	font-size: 0.74rem;
+	font-weight: 700;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: #5d7896;
+}
+
+.iconWrap {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	height: 32px;
+	width: 32px;
+	border-radius: 8px;
+	background: #eaf3ff;
+	border: 1px solid #d7e5f6;
+	color: #1f4b80;
+	font-size: 0.92rem;
+}
+
+.metricValue {
+	margin: 10px 0 0;
+	font-size: clamp(1.8rem, 2.3vw, 2.1rem);
+	font-weight: 900;
+	line-height: 1;
+	font-variant-numeric: tabular-nums;
+	color: #13355b;
+}
+
+.panel {
+	padding: 16px;
+	border-radius: 12px;
+	background: #ffffff;
+	border: 1px solid #d8e4f2;
+	box-shadow: 0 8px 18px rgba(15, 39, 70, 0.07);
+}
+
+.panelHead h3 {
+	margin: 0;
+	font-size: 1.02rem;
+	letter-spacing: -0.01em;
+	color: #183558;
+}
+
+.actionList {
+	list-style: none;
+	padding: 0;
+	margin: 12px 0 0;
+	display: grid;
+	gap: 9px;
+}
+
+.actionList li {
+	list-style: none;
+}
+
+.actionRow {
+	display: grid;
+	grid-template-columns: auto 1fr auto;
+	align-items: center;
+	gap: 11px;
+	padding: 10px;
+	border-radius: 10px;
+	border: 1px solid #d3e1f0;
+	background: #f8fbff;
+	text-decoration: none;
+	transition: transform 170ms ease, box-shadow 170ms ease, border-color 170ms ease, background-color 170ms ease;
+}
+
+.actionRow:hover {
+	transform: translateY(-1px);
+	background: #f4f9ff;
+	border-color: #c5d9ee;
+	box-shadow: 0 8px 16px rgba(14, 39, 71, 0.08);
+}
+
+.actionIcon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	height: 30px;
+	width: 30px;
+	border-radius: 8px;
+	background: #e6f1ff;
+	border: 1px solid #d0e1f4;
+	color: #1f4b80;
+	font-size: 0.88rem;
+}
+
+.actionContent {
+	display: grid;
+	gap: 2px;
+}
+
+.actionContent strong {
+	font-size: 0.91rem;
+	color: #1a385d;
+}
+
+.actionContent small {
+	font-size: 0.81rem;
+	color: #5b7795;
+	line-height: 1.35;
+}
+
+.actionArrow {
+	color: #2d5f98;
+	font-size: 0.8rem;
+	transition: transform 170ms ease;
+}
+
+.actionRow:hover .actionArrow {
+	transform: translateX(2px);
+}
+
+.timelineList {
+	list-style: none;
+	padding: 0;
+	margin: 12px 0 0;
+	display: grid;
+	gap: 8px;
+}
+
+.timelineRow {
+	display: flex;
+	align-items: flex-start;
+	gap: 8px;
+	padding: 9px 10px;
+	border-radius: 9px;
+	border: 1px solid #d7e3f2;
+	background: #f8fbff;
+	font-size: 0.84rem;
+	line-height: 1.4;
+	color: #4e6887;
+	transition: background-color 160ms ease, border-color 160ms ease;
+}
+
+.timelineRow:hover {
+	background: #f2f8ff;
+	border-color: #c7dcef;
+}
+
+.timelineIcon {
+	margin-top: 2px;
+	flex: 0 0 auto;
+	color: #2b5c95;
+}
+
+@keyframes dashboardFadeIn {
+	from {
+		opacity: 0;
+		transform: translateY(6px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+@keyframes heroBackdropShift {
+	0%,
+	100% {
+		background-position: 0% 50%, 100% 50%, 0 0;
+	}
+	50% {
+		background-position: 100% 40%, 0% 60%, 0 0;
+	}
+}
+
+@keyframes heroOrbFloat {
+	0%,
+	100% {
+		transform: translate3d(0, 0, 0) scale(1);
+		opacity: 0.58;
+	}
+	50% {
+		transform: translate3d(-10px, 8px, 0) scale(1.08);
+		opacity: 0.8;
+	}
+}
+
+@media (max-width: 900px) {
+	.metricsGrid {
+		grid-template-columns: repeat(2, minmax(160px, 1fr));
+	}
+}
+
+@media (max-width: 760px) {
+	.hero {
+		padding: 16px;
+		border-radius: 14px;
+		min-height: 160px;
+	}
+
+	.metricsGrid {
+		grid-template-columns: 1fr;
+	}
+
+	.panel,
+	.metricCard {
+		border-radius: 10px;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.root,
+	.metricCard,
+	.actionRow,
+	.actionArrow,
+	.timelineRow,
+	.heroOverlay,
+	.heroAtmosphere::before,
+	.heroAtmosphere::after {
+		animation: none !important;
+		transition: none !important;
+	}
+}

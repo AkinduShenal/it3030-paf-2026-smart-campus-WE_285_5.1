@@ -1,8 +1,9 @@
 package com.smartcampus.operationshub.service;
 
+import java.util.List;
+
 import com.smartcampus.operationshub.dto.NotificationResponse;
 import com.smartcampus.operationshub.entity.NotificationType;
-import java.util.List;
 
 public interface NotificationService {
 
@@ -18,6 +19,10 @@ public interface NotificationService {
     List<NotificationResponse> getNotifications(String recipientEmail, boolean unreadOnly);
 
     NotificationResponse markAsRead(Long id, String recipientEmail);
+
+    NotificationResponse markAsUnread(Long id, String recipientEmail);
+
+    void deleteNotification(Long id, String recipientEmail);
 
     long getUnreadCount(String recipientEmail);
 }

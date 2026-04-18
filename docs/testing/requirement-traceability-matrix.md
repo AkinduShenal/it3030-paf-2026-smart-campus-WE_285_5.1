@@ -6,6 +6,8 @@ Track requirement-to-implementation and requirement-to-test links so evaluators 
 |---|---|---|---|---|---|---|
 | A-01 | Add and manage resources | WS1 | /api/v1/resources, CataloguePage | Unit + Integration | ResourceServiceTest, ResourceControllerIntegrationTest | Pass (Backend) |
 | A-02 | Search and filter resources | WS1 | GET /api/v1/resources with query params | Integration + UI | ResourceControllerIntegrationTest | Pass (Backend API) |
+| A-03 | Get, update, and delete resource by id | WS1 | GET/PUT/DELETE /api/v1/resources/{id} | Integration | ResourceControllerIntegrationTest.resourceCrudLifecycle_shouldSupportGetUpdateDeleteById | Pass (Backend API) |
+| A-04 | Reject invalid capacity range filters | WS1 | GET /api/v1/resources?minCapacity=&maxCapacity= | Integration | ResourceControllerIntegrationTest.getResources_shouldReturnBadRequestWhenCapacityRangeInvalid | Pass (Backend API) |
 | B-01 | Create booking request | WS2 | POST /api/v1/bookings | Unit + Integration | BookingServiceTest, BookingControllerIntegrationTest | Pass (Backend) |
 | B-02 | Prevent overlapping bookings | WS2 | Booking conflict validation service | Unit + Integration | BookingServiceTest, BookingControllerIntegrationTest | Pass (Backend) |
 | B-03 | Approve or reject bookings | WS2 | PATCH approve/reject endpoints | Integration + UI | BookingControllerIntegrationTest | Pass (Backend API) |

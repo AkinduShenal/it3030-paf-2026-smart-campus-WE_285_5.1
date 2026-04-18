@@ -20,3 +20,16 @@ export async function markNotificationAsRead(id, recipientEmail) {
 	});
 	return response.data;
 }
+
+export async function markNotificationAsUnread(id, recipientEmail) {
+	const response = await httpClient.patch(`/notifications/${id}/unread`, null, {
+		params: { recipientEmail }
+	});
+	return response.data;
+}
+
+export async function deleteNotification(id, recipientEmail) {
+	await httpClient.delete(`/notifications/${id}`, {
+		params: { recipientEmail }
+	});
+}
