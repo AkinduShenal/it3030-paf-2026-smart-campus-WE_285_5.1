@@ -730,6 +730,10 @@ th {
 
 @media (max-width: 1100px) {
 	.catalogue-grid {
+		grid-template-columns: 1fr;
+	}
+}
+
 .booking-resource-hint {
 	display: block;
 	margin-top: 5px;
