@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useEffect, useState, useMemo, useRef, useCallback } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { FaCheckCircle, FaTrashAlt, FaUndoAlt } from "react-icons/fa";
 import toast, { Toaster } from "react-hot-toast";
@@ -133,23 +133,31 @@ function NotificationsPage() {
 	const [showAllNotifications, setShowAllNotifications] = useState(false);
 	const [actionInProgress, setActionInProgress] = useState({});
 
+	// Track latest request to prevent race conditions
+	const latestRequestRef = useRef(0);
+	// Debounce timer for email input
+	const emailDebounceRef = useRef(null);
+
 	useEffect(() => {
-		if (profile?.email) {
+		if (profile?.email && !recipientEmail) {
 			setRecipientEmail(profile.email);
 		}
-	}, [profile]);
+	}, [profile, recipientEmail]);
 
+	// Debounced email input handler
 	useEffect(() => {
 		if (!recipientEmail) {
 			return;
 		}
-		loadNotifications({ email: recipientEmail, unreadOnly });
-	}, [recipientEmail]);
 
-	useEffect(() => {
-		setShowAllNotifications(false);
-	}, [recipientEmail, unreadOnly, typeFilter]);
+		const timeoutId = setTimeout(() => {
+			loadNotifications({ email: recipientEmail, unreadOnly });
+		}, 500);
 
+		return () => clearTimeout(timeoutId);
+	}, [recipientEmail, unreadOnly]);
+
+	// Refresh interval (6 seconds)
 	useEffect(() => {
 		if (!recipientEmail) {
 			return;
@@ -162,15 +170,25 @@ function NotificationsPage() {
 		return () => window.clearInterval(intervalId);
 	}, [recipientEmail, unreadOnly]);
 
-	async function loadNotifications(options = {}) {
+	// Reset pagination when filters change
+	useEffect(() => {
+		setShowAllNotifications(false);
+	}, [recipientEmail, unreadOnly, typeFilter]);
+
+	const loadNotifications = useCallback(async (options = {}) => {
 		const email = options.email ?? recipientEmail;
 		const unreadFilter = options.unreadOnly ?? unreadOnly;
 		const silent = Boolean(options.silent);
 
 		if (!email) {
-			toast.error("Recipient email is required.");
+			if (!silent) {
+				toast.error("Recipient email is required.");
+			}
 			return;
 		}
+
+		// Track this request
+		const requestId = ++latestRequestRef.current;
 
 		try {
 			if (!silent) {
@@ -180,61 +198,104 @@ function NotificationsPage() {
 				fetchNotifications(email, unreadFilter),
 				fetchNotificationSummary(email)
 			]);
-			setNotifications(list);
+
+			// Only update state if this is the latest request
+			if (requestId !== latestRequestRef.current) {
+				return;
+			}
+
+			// Prevent unnecessary re-renders: only update if data actually changed
+			setNotifications((prevNotifications) => {
+				const isSame = JSON.stringify(prevNotifications) === JSON.stringify(list);
+				return isSame ? prevNotifications : list;
+			});
+
 			setUnreadCount(summary?.unreadCount || 0);
 		} catch (error) {
-			if (!silent) {
+			if (!silent && requestId === latestRequestRef.current) {
 				toast.error(getErrorMessage(error));
 			}
 		} finally {
-			if (!silent) {
+			if (!silent && requestId === latestRequestRef.current) {
 				setIsLoading(false);
 			}
 		}
-	}
+	}, [recipientEmail, unreadOnly]);
 
 	async function handleMarkAsRead(notificationId) {
+		// Optimistic UI: update immediately
+		setNotifications((prev) =>
+			prev.map((n) => (n.id === notificationId ? { ...n, read: true } : n))
+		);
+
 		setActionInProgress((currentState) => ({ ...currentState, [`read-${notificationId}`]: true }));
 		try {
 			await markNotificationAsRead(notificationId, recipientEmail);
 			toast.success("Notification marked as read.");
-			await loadNotifications({ silent: true });
 		} catch (error) {
+			// Revert on error
+			setNotifications((prev) =>
+				prev.map((n) => (n.id === notificationId ? { ...n, read: false } : n))
+			);
 			toast.error(getErrorMessage(error));
 		} finally {
-			setActionInProgress((currentState) => ({ ...currentState, [`read-${notificationId}`]: false }));
+			setActionInProgress((currentState) => {
+				const newState = { ...currentState };
+				delete newState[`read-${notificationId}`];
+				return newState;
+			});
 		}
 	}
 
 	async function handleMarkAsUnread(notificationId) {
+		// Optimistic UI: update immediately
+		setNotifications((prev) =>
+			prev.map((n) => (n.id === notificationId ? { ...n, read: false } : n))
+		);
+
 		setActionInProgress((currentState) => ({ ...currentState, [`unread-${notificationId}`]: true }));
 		try {
 			await markNotificationAsUnread(notificationId, recipientEmail);
 			toast.success("Notification marked as unread.");
-			await loadNotifications({ silent: true });
 		} catch (error) {
+			// Revert on error
+			setNotifications((prev) =>
+				prev.map((n) => (n.id === notificationId ? { ...n, read: true } : n))
+			);
 			toast.error(getErrorMessage(error));
 		} finally {
-			setActionInProgress((currentState) => ({ ...currentState, [`unread-${notificationId}`]: false }));
+			setActionInProgress((currentState) => {
+				const newState = { ...currentState };
+				delete newState[`unread-${notificationId}`];
+				return newState;
+			});
 		}
 	}
 
 	async function handleDeleteNotification(notificationId) {
+		// Optimistic UI: remove from list immediately
+		setNotifications((prev) => prev.filter((n) => n.id !== notificationId));
+
 		setActionInProgress((currentState) => ({ ...currentState, [`delete-${notificationId}`]: true }));
 		try {
 			await deleteNotification(notificationId, recipientEmail);
 			toast.success("Notification deleted.");
-			await loadNotifications({ silent: true });
 		} catch (error) {
+			// Revert on error (reload to restore deleted notification)
+			await loadNotifications({ silent: true });
 			toast.error(getErrorMessage(error));
 		} finally {
-			setActionInProgress((currentState) => ({ ...currentState, [`delete-${notificationId}`]: false }));
+			setActionInProgress((currentState) => {
+				const newState = { ...currentState };
+				delete newState[`delete-${notificationId}`];
+				return newState;
+			});
 		}
 	}
 
 	async function handleUnreadOnlyChange(checked) {
 		setUnreadOnly(checked);
-		await loadNotifications({ unreadOnly: checked });
+		// No need to manually call loadNotifications — useEffect will handle it
 	}
 
 	const filteredNotifications = notifications.filter((notification) => {
@@ -244,9 +305,12 @@ function NotificationsPage() {
 		return getTypeGroup(notification.type) === typeFilter;
 	});
 
-	const sortedFilteredNotifications = [...filteredNotifications].sort(
-		(a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-	);
+	// Memoize sorting to prevent re-sort on every render
+	const sortedFilteredNotifications = useMemo(() => {
+		return [...filteredNotifications].sort(
+			(a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+		);
+	}, [filteredNotifications]);
 
 	const hasMoreThanInitial = sortedFilteredNotifications.length > INITIAL_VISIBLE_NOTIFICATIONS;
 	const visibleNotifications = showAllNotifications
